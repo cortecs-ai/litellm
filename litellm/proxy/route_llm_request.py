@@ -463,6 +463,11 @@ async def route_request(  # noqa: PLR0915 - Complex routing function, refactorin
     if "_cortecs_router_instance" not in globals():
         _cortecs_router_instance = CortecsLLMRouter(config=LLMRouterConfig())
 
-    return _cortecs_router_instance.completion_handler.handle_request(data, llm_call)
+    if route_type in ["aembedding"]:
+        return _cortecs_router_instance.embedding_handler.handle_request(data, llm_call)
+    elif route_type in ["atranscription"]:
+        return _cortecs_router_instance.transcription_handler.handle_request(data, llm_call)
+    else:
+        return _cortecs_router_instance.completion_handler.handle_request(data, llm_call)
 
     ### END CUSTOM CORTECS LLM ROUTER INTERCEPTION ###
