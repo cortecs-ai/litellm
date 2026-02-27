@@ -1,6 +1,3 @@
-[submodule "cortecs"]
-	path = cortecs
-	url = https://github.com/cortecs-ai/llm-router.git
 [submodule "litellm/cortecs"]
 	path = litellm/cortecs
 	url = https://github.com/cortecs-ai/llm-router.git
