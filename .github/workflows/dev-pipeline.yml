@@ -96,6 +96,8 @@ jobs:
       - name: Build and push Docker images
         run: |
           # Navigate to the directory where the docker-compose.yml file is located
+          touch litellm/cortecs/.env
+          touch litellm/cortecs/proxy_config.yaml
           cd litellm/cortecs/deployment/docker
 
           if [ "${{ env.backend_changed }}" == "true" ]; then
