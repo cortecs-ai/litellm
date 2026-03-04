@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend_version
-          path: deployment/docker/backend_version.txt
+          path: litellm/cortecs/deployment/docker/backend_version.txt
           retention-days: 1  # Retains artifact for 1 day
 #
 #  deploy:
