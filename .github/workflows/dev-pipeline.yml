@@ -190,8 +190,8 @@ jobs:
           backend_version=$(cat backend_version.txt)
           echo "backend version $backend_version"
           # Update the deployment YAML file with the new image version
-          sed -i "s|web_app:litellm-.*|web_app:litellm-${backend_version}|" deployment/kubernetes/backend/dev/deployment_backend_dev.yaml          # Apply the updated deployment
-          kubectl apply -f deployment/kubernetes/backend/dev
+          sed -i "s|web_app:litellm-.*|web_app:litellm-${backend_version}|" litellm/cortecs/deployment/kubernetes/backend/dev/deployment_backend_dev.yaml          # Apply the updated deployment
+          kubectl apply -f litellm/cortecs/deployment/kubernetes/backend/dev
           echo "Waiting for backend deployment to be ready..."
           kubectl rollout status deployment/litellm -n web-app
           echo "Current images for litellm:"
