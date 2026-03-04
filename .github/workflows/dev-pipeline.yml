@@ -99,11 +99,10 @@ jobs:
           cd litellm/cortecs/deployment/docker
 
           if [ "${{ env.backend_changed }}" == "true" ]; then
-            echo "Building and pushing backend..."
-            backend_version=$(grep -oP '(?<=web_app:litellm-)\d+\.\d+\.\d+' docker-compose.yml)
+            export BACKEND_VERSION=${{ env.NEW_BACKEND_VERSION }}
+            echo "Building and pushing backend version $BACKEND_VERSION"
             docker compose -f docker-compose.yml build litellm
-            docker tag dockercortecs/web_app:litellm-$backend_version dockercortecs/web_app:litellm-${{ env.NEW_BACKEND_VERSION }}
-            docker push dockercortecs/web_app:litellm-${{ env.NEW_BACKEND_VERSION }}
+            docker push dockercortecs/web_app:litellm-$BACKEND_VERSION
             echo ${{ env.NEW_BACKEND_VERSION }} > backend_version.txt
           fi
 
