@@ -78,6 +78,12 @@ jobs:
             # Get Latest Backend Tag
             LATEST_BACKEND_TAG=$(curl -s -X GET https://hub.docker.com/v2/namespaces/dockercortecs/repositories/web_app/tags?page_size=100 \
               -H "Authorization: Bearer $BEARER" | jq -r '.results[] | select(.name | startswith("litellm")) | .name' | sort -V | tail -n 1)
+
+            if [ -z "$LATEST_BACKEND_TAG" ]; then
+              echo "No existing image tag found. Setting to default: 0.0.1"
+              LATEST_BACKEND_TAG="0.0.1"
+            fi
+
             echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG" >> $GITHUB_ENV
             echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG"
             backend_version=$(echo "$LATEST_BACKEND_TAG" | grep -oP '(?<=litellm-)\d+\.\d+\.\d+')
