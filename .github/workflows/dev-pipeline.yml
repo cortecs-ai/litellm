@@ -102,7 +102,7 @@ jobs:
             export BACKEND_VERSION=${{ env.NEW_BACKEND_VERSION }}
             echo "Building and pushing backend version $BACKEND_VERSION"
             docker compose -f docker-compose.yml build litellm
-            docker push dockercortecs/web_app:litellm-$BACKEND_VERSION
+            docker compose -f docker-compose.yml push litellm
             echo ${{ env.NEW_BACKEND_VERSION }} > backend_version.txt
           fi
 
