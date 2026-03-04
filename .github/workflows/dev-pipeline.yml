@@ -44,18 +44,23 @@ jobs:
       - name: Check for changes in backend
         id: backend_changes
         run: |
-          echo "Comparing commits: ${{ env.last_successful_commit }} -> ${{ env.current_commit }}"
-          CHANGED_FILES=$(git diff --name-only "${{ env.last_successful_commit }}" "${{ env.current_commit }}")
-
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-
-          backend_changed=false
-
-          # Check for backend changes
-          if echo "$CHANGED_FILES" | grep -q "^litellm/"; then
-            echo "Detected changes"
+          if [ -z "${{ env.last_successful_commit }}" ]; then
+            echo "No last successful commit found. Defaulting backend_changed to true."
             backend_changed=true
+          else
+            echo "Comparing commits: ${{ env.last_successful_commit }} -> ${{ env.current_commit }}"
+            CHANGED_FILES=$(git diff --name-only "${{ env.last_successful_commit }}" "${{ env.current_commit }}")
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            backend_changed=false
+
+            # Check for backend changes
+            if echo "$CHANGED_FILES" | grep -q "^litellm/"; then
+              echo "Detected changes"
+              backend_changed=true
+            fi
           fi
 
           echo "backend_changed=$backend_changed" >> "$GITHUB_ENV"
