@@ -81,7 +81,7 @@ jobs:
 
             if [ -z "$LATEST_BACKEND_TAG" ]; then
               echo "No existing image tag found. Setting to default: 0.0.1"
-              LATEST_BACKEND_TAG="0.0.1"
+              LATEST_BACKEND_TAG="litellm-0.0.1"
             fi
 
             echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG" >> $GITHUB_ENV
