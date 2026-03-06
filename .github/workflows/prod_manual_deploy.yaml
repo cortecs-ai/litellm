@@ -38,7 +38,7 @@ jobs:
           sed -i "s|dockercortecs/web_app:.*|dockercortecs/web_app:${IMAGE}|" "$FILE"
 
           echo "Current images for litellm:"
-          kubectl describe -n web-app deployment.apps/litellm | grep Image
+          kubectl describe -n web-app deployment.apps/litellm | grep Image || true
 
           echo "Applying deployment..."
           kubectl apply -f "$FILE"
