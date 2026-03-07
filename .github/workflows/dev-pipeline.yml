@@ -7,14 +7,40 @@ on:
       - cortecs
 
 jobs:
-  build_and_push:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: 'true'
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install dependencies
+        run: |
+          poetry install --with dev,proxy-dev
+
+      - name: Run pytest for cortecs
+        run: poetry run pytest litellm/cortecs/
+
+  build_and_push:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
           token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
 
       - name: Set up Docker Buildx
@@ -114,18 +140,17 @@ jobs:
         with:
           name: backend_version
           path: litellm/cortecs/deployment/docker/backend_version.txt
-          retention-days: 1  # Retains artifact for 1 day
+          retention-days: 1 # Retains artifact for 1 day
 
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: 'true'
+          submodules: "true"
           token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
 
       # Retrieve the last successful commit
@@ -181,7 +206,6 @@ jobs:
           k8s-url: ${{ secrets.KUBERNETES_DEV_URL }}
           k8s-secret: ${{ secrets.KUBERNETES_DEV_SECRET }}
 
-
       # Update Kubernetes deployment for backend (if backend has changed)
       - name: Update Kubernetes backend deployment
         if: env.backend_changed == 'true'
@@ -208,14 +232,11 @@ jobs:
           # kubectl wait --for=condition=complete --timeout=200s job/post-deployment-backend-tests -n web-app
         continue-on-error: true
 
-
-
       - name: Debug backend Pod Status after rollout
         if: env.backend_changed == 'true'
         run: |
           echo "Pod statuses after backend rollout..."
           kubectl get pods -n web-app -l app=litellm
-
 
       # Rollback backend on failure
       - name: Rollback backend on failure
@@ -226,7 +247,6 @@ jobs:
           echo "Pod statuses after rollback..."
           kubectl get pods -n web-app -l app=litellm
 
-
       # Pipeline success notification for backend (if backend rollout succeeded and there were backend changes)
       - name: Notify backend success
         if: env.backend_changed == 'true' && steps.backend_rollout_status.outcome == 'success'
@@ -234,7 +254,6 @@ jobs:
           curl -H "Content-Type: application/json" \
             -d "{\"content\": \"✅ Backend deployment succeeded in **${{ github.repository }}**\nBranch : **${{ github.ref_name }}**\nLaunched by : **${{ github.actor }}**\nBackend deployment completed successfully.\nLogs for more details: [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
             ${{ secrets.DISCORD_WEBHOOK_URL }}
-
 
       # Rollback notification for backend
       - name: Notify backend rollback

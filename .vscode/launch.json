@@ -2,23 +2,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-        "name": "Python Debugger: Current File",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "${file}",
-        "console": "integratedTerminal",
-        "envFile": "${workspaceFolder}/litellm/cortecs/.env"
+      "name": "Python Debugger: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env"
     },
     {
-        "name": "Warmup",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
-        "console": "integratedTerminal",
-        "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-        "args": [
-          "--prompt-number", "1",
-      ]
+      "name": "Warmup",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env",
+      "args": ["--prompt-number", "1"]
     },
     {
       "name": "LiteLLM Proxy (Poetry)",
@@ -28,7 +26,7 @@
       "args": [
         "--config",
         "litellm/cortecs/proxy_config.yaml",
-        "--debug",
+        "--debug"
         // "--detailed_debug"
       ],
       "python": "${command:python.interpreterPath}",
@@ -42,6 +40,16 @@
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
       "subProcess": true,
       "justMyCode": false
+    },
+    {
+      "name": "Pytest: cortecs",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["litellm/cortecs/"],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
