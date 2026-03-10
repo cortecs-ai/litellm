@@ -12197,4 +12197,4 @@ app.include_router(mcp_discoverable_endpoints_router)
 ####
 from litellm.cortecs.backend.router.stats_router import router as stats_router
 
-app.include_router(stats_router, prefix="/llm-router")
+app.include_router(stats_router, prefix="/stats")
