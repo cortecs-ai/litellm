@@ -3452,6 +3452,7 @@ LLMResponseTypes = Union[
     AnthropicMessagesResponse,
     ResponsesAPIResponse,
     LiteLLMSendMessageResponse,
+    TranscriptionResponse
 ]
 
 

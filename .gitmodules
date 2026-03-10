@@ -1,0 +1,3 @@
+[submodule "litellm/cortecs"]
+	path = litellm/cortecs
+	url = https://github.com/cortecs-ai/llm-router.git

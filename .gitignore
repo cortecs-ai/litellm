@@ -31,7 +31,6 @@ langfuse.log
 litellm/tests/test_custom_logger.py
 litellm/tests/langfuse.log
 litellm/tests/dynamo*.log
-.vscode/settings.json
 litellm/proxy/log.txt
 proxy_server_config_@.yaml
 .gitignore
@@ -91,7 +90,6 @@ test.py
 litellm_config.yaml
 !.github/observatory/litellm_config.yaml
 .cursor
-.vscode/launch.json
 litellm/proxy/to_delete_loadtest_work/*
 update_model_cost_map.py
 tests/test_litellm/proxy/_experimental/mcp_server/test_mcp_server_manager.py
@@ -102,3 +100,4 @@ STABILIZATION_TODO.md
 **/playwright-report
 **/*.storageState.json
 **/coverage
+ovh-ca.crt

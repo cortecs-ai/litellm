@@ -1,0 +1,63 @@
+name: Prod Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_version:
+        description: "Image version e.g. litellm-0.0.2"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      - name: Set Kubernetes context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: service-account
+          k8s-url: ${{ secrets.KUBERNETES_PROD_URL }}
+          k8s-secret: ${{ secrets.KUBERNETES_PROD_SECRET }}
+
+      - name: Update image, apply deployment and monitor rollout
+        env:
+          IMAGE: ${{ github.event.inputs.image_version }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          set -e
+          FILE="litellm/cortecs/deployment/kubernetes/litellm/prod/deployment_litellm_prod.yaml"
+
+          echo "Updating image to ${IMAGE} in ${FILE}"
+          # Replace the image tag for dockercortecs/web_app
+          sed -i "s|dockercortecs/web_app:.*|dockercortecs/web_app:${IMAGE}|" "$FILE"
+
+          echo "Current images for litellm:"
+          kubectl describe -n web-app deployment.apps/litellm | grep Image || true
+
+          echo "Applying deployment..."
+          kubectl apply -f "$FILE"
+
+          echo "Current images for litellm after deployment:"
+          kubectl describe -n web-app deployment.apps/litellm | grep Image
+
+          kubectl get pods -n web-app -l app=litellm
+
+
+          echo "Waiting for rollout..."
+          if ! kubectl rollout status deployment/litellm -n web-app --timeout=180s; then
+            echo "Rollout failed. Sending failure notification and attempting rollback."
+            curl -H "Content-Type: application/json" -d "{\"content\":\"❌ Production deploy FAILED for image ${IMAGE} in **${{ github.repository }}**. Rolling back.\"}" "$WEBHOOK" || true
+            kubectl rollout undo -n web-app deployment/litellm
+            kubectl get pods -n web-app -l app=litellm
+            curl -H "Content-Type: application/json" -d "{\"content\":\"🔁 Rollback attempted for litellm in **${{ github.repository }}**.\"}" "$WEBHOOK" || true
+            exit 1
+          fi
+
+          echo "Rollout succeeded. Sending success notification."
+          curl -H "Content-Type: application/json" -d "{\"content\":\"✅ Production deploy SUCCEEDED with image ${IMAGE} in **${{ github.repository }}**.\"}" "$WEBHOOK" || true
