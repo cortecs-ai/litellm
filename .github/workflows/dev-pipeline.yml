@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - cortecs
+      - "#754-lite-llm"
 
 jobs:
   test:
