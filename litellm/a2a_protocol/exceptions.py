@@ -28,7 +28,7 @@ class A2AError(Exception):
         num_retries: Optional[int] = None,
     ):
         self.status_code = status_code
-        self.message = f"litellm.A2AError: {message}"
+        self.message = f"A2AError: {message}"
         self.llm_provider = llm_provider
         self.model = model
         self.litellm_debug_info = litellm_debug_info
@@ -43,9 +43,9 @@ class A2AError(Exception):
     def __str__(self) -> str:
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self) -> str:
@@ -139,10 +139,7 @@ class A2ALocalhostURLError(A2AConnectionError):
         self.base_url = base_url
         self.original_error = original_error
 
-        message = (
-            f"Agent card contains localhost/internal URL '{localhost_url}'. "
-            f"Retrying with base URL '{base_url}'."
-        )
+        message = f"Agent card contains localhost/internal URL '{localhost_url}'. Retrying with base URL '{base_url}'."
         super().__init__(
             message=message,
             url=localhost_url,
