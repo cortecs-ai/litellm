@@ -26,9 +26,7 @@ from ..utils import OVHCloudException
 
 
 class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
-    def get_supported_openai_params(
-        self, model: str
-    ) -> List[OpenAIAudioTranscriptionOptionalParams]:
+    def get_supported_openai_params(self, model: str) -> List[OpenAIAudioTranscriptionOptionalParams]:
         # OVHCloud implements the OpenAI-compatible Whisper interface.
         # We pass through the same optional params as the OpenAI Whisper API.
         return ["language", "prompt", "response_format", "timestamp_granularities", "temperature"]
@@ -55,11 +53,7 @@ class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
         litellm_params: dict,
         stream: Optional[bool] = None,
     ) -> str:
-        api_base = (
-            "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
-            if api_base is None
-            else api_base.rstrip("/")
-        )
+        api_base = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1" if api_base is None else api_base.rstrip("/")
         complete_url = f"{api_base}/audio/transcriptions"
         return complete_url
 
@@ -141,6 +135,10 @@ class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
         try:
             response_json = raw_response.json()
         except Exception:
+            # If the response is not JSON, but the request was successful, assume it's plain text (e.g. response_format="text")
+            if raw_response.status_code == 200:
+                return TranscriptionResponse(text=raw_response.text)
+
             raise OVHCloudException(
                 message=raw_response.text,
                 status_code=raw_response.status_code,
@@ -152,5 +150,3 @@ class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
 
         response._hidden_params = response_json
         return response
-
-
