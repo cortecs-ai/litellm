@@ -1682,6 +1682,7 @@ class StreamingChatCompletionChunk(OpenAIChatCompletionChunk):
         super().__init__(**kwargs)
 
 
+
 class ModelResponseBase(OpenAIObject):
     id: str
     """A unique identifier for the completion."""

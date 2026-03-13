@@ -549,15 +549,9 @@ from litellm.types.secret_managers.main import (
     KeyManagementSettings,
     KeyManagementSystem,
 )
-from litellm.types.utils import (
-    CredentialItem,
-    CustomHuggingfaceTokenizer,
-)
+from litellm.types.utils import CredentialItem, CustomHuggingfaceTokenizer
 from litellm.types.utils import ModelInfo as ModelMapInfo
-from litellm.types.utils import (
-    RawRequestTypedDict,
-    StandardLoggingPayload,
-)
+from litellm.types.utils import RawRequestTypedDict, StandardLoggingPayload
 from litellm.utils import _add_custom_logger_callback_to_specific_event
 
 try:
@@ -630,9 +624,9 @@ except ImportError:
 server_root_path = get_server_root_path()
 _license_check = LicenseCheck()
 premium_user: bool = _license_check.is_premium()
-premium_user_data: Optional["EnterpriseLicenseData"] = (
-    _license_check.airgapped_license_data
-)
+premium_user_data: Optional[
+    "EnterpriseLicenseData"
+] = _license_check.airgapped_license_data
 global_max_parallel_request_retries_env: Optional[str] = os.getenv(
     "LITELLM_GLOBAL_MAX_PARALLEL_REQUEST_RETRIES"
 )
@@ -1208,7 +1202,8 @@ try:
     # Validate packaged UI before proceeding
     if not _validate_ui_directory(packaged_ui_path):
         verbose_proxy_logger.error(
-            f"Packaged UI at {packaged_ui_path} is invalid or incomplete. UI may not function correctly."
+            f"Packaged UI at {packaged_ui_path} is invalid or incomplete. "
+            f"UI may not function correctly."
         )
 
     # Decision tree for UI path selection:
@@ -1473,9 +1468,9 @@ master_key: Optional[str] = None
 config_agents: Optional[List[AgentConfig]] = None
 otel_logging = False
 prisma_client: Optional[PrismaClient] = None
-shared_aiohttp_session: Optional["ClientSession"] = (
-    None  # Global shared session for connection reuse
-)
+shared_aiohttp_session: Optional[
+    "ClientSession"
+] = None  # Global shared session for connection reuse
 user_api_key_cache = DualCache(
     default_in_memory_ttl=UserAPIKeyCacheTTLEnum.in_memory_cache_ttl.value
 )
@@ -1483,13 +1478,13 @@ model_max_budget_limiter = _PROXY_VirtualKeyModelMaxBudgetLimiter(
     dual_cache=user_api_key_cache
 )
 litellm.logging_callback_manager.add_litellm_callback(model_max_budget_limiter)
-redis_usage_cache: Optional[RedisCache] = (
-    None  # redis cache used for tracking spend, tpm/rpm limits
-)
+redis_usage_cache: Optional[
+    RedisCache
+] = None  # redis cache used for tracking spend, tpm/rpm limits
 polling_via_cache_enabled: Union[Literal["all"], List[str], bool] = False
-native_background_mode: List[str] = (
-    []
-)  # Models that should use native provider background mode instead of polling
+native_background_mode: List[
+    str
+] = []  # Models that should use native provider background mode instead of polling
 polling_cache_ttl: int = 3600  # Default 1 hour TTL for polling cache
 user_custom_auth = None
 user_custom_key_generate = None
@@ -1845,9 +1840,9 @@ async def update_cache(  # noqa: PLR0915
         _id = "team_id:{}".format(team_id)
         try:
             # Fetch the existing cost for the given user
-            existing_spend_obj: Optional[LiteLLM_TeamTable] = (
-                await user_api_key_cache.async_get_cache(key=_id)
-            )
+            existing_spend_obj: Optional[
+                LiteLLM_TeamTable
+            ] = await user_api_key_cache.async_get_cache(key=_id)
             if existing_spend_obj is None:
                 # do nothing if team not in api key cache
                 return
@@ -4643,14 +4638,7 @@ class ProxyConfig:
                                 }
                             ),
                         },
-                        "update": {
-                            "param_value": safe_dumps(
-                                {
-                                    "interval_hours": interval_hours,
-                                    "force_reload": False,
-                                }
-                            )
-                        },
+                        "update": {"param_value": safe_dumps({"interval_hours": interval_hours, "force_reload": False})},
                     },
                 )
 
@@ -4751,14 +4739,7 @@ class ProxyConfig:
                                 }
                             ),
                         },
-                        "update": {
-                            "param_value": safe_dumps(
-                                {
-                                    "interval_hours": interval_hours,
-                                    "force_reload": False,
-                                }
-                            )
-                        },
+                        "update": {"param_value": safe_dumps({"interval_hours": interval_hours, "force_reload": False})},
                     },
                 )
 
@@ -4818,17 +4799,17 @@ class ProxyConfig:
         )
 
         try:
-            guardrails_in_db: List[Guardrail] = (
-                await GuardrailRegistry.get_all_guardrails_from_db(
-                    prisma_client=prisma_client
-                )
+            guardrails_in_db: List[
+                Guardrail
+            ] = await GuardrailRegistry.get_all_guardrails_from_db(
+                prisma_client=prisma_client
             )
             verbose_proxy_logger.debug(
                 "guardrails from the DB %s", str(guardrails_in_db)
             )
             for guardrail in guardrails_in_db:
                 IN_MEMORY_GUARDRAIL_HANDLER.sync_guardrail_from_db(
-                    guardrail=guardrail,
+                    guardrail=cast(Guardrail, guardrail),
                 )
         except Exception as e:
             verbose_proxy_logger.exception(
@@ -5203,9 +5184,9 @@ async def initialize(  # noqa: PLR0915
         user_api_base = api_base
         dynamic_config[user_model]["api_base"] = api_base
     if api_version:
-        os.environ["AZURE_API_VERSION"] = (
-            api_version  # set this for azure - litellm can read this from the env
-        )
+        os.environ[
+            "AZURE_API_VERSION"
+        ] = api_version  # set this for azure - litellm can read this from the env
     if max_tokens:  # model-specific param
         dynamic_config[user_model]["max_tokens"] = max_tokens
     if temperature:  # model-specific param
@@ -5545,7 +5526,8 @@ class ProxyStartupEvent:
             "enabled", False
         ):
             verbose_proxy_logger.debug(
-                "Semantic tool filter not configured or not enabled, skipping initialization"
+                "Semantic tool filter not configured or not enabled, "
+                "skipping initialization"
             )
             return
 
@@ -5651,8 +5633,7 @@ class ProxyStartupEvent:
 
             teams_pydantic_obj = [NewUserRequestTeam(**team) for team in _teams]
             await update_default_team_member_budget(
-                teams=teams_pydantic_obj,
-                user_api_key_dict=UserAPIKeyAuth(token=hash_token(master_key)),  # type: ignore
+                teams=teams_pydantic_obj, user_api_key_dict=UserAPIKeyAuth(token=hash_token(master_key))  # type: ignore
             )
 
     @classmethod
@@ -6219,7 +6200,8 @@ class ProxyStartupEvent:
                     configure_kwargs["sample_rate"] = int(float(sample_rate_env))
                 except (ValueError, TypeError):
                     raise ValueError(
-                        f"PYROSCOPE_SAMPLE_RATE must be a number, got: {sample_rate_env!r}"
+                        "PYROSCOPE_SAMPLE_RATE must be a number, got: "
+                        f"{sample_rate_env!r}"
                     )
             pyroscope.configure(**configure_kwargs)
             msg = (
@@ -11873,9 +11855,9 @@ async def get_config_list(
                             hasattr(sub_field_info, "description")
                             and sub_field_info.description is not None
                         ):
-                            nested_fields[idx].field_description = (
-                                sub_field_info.description
-                            )
+                            nested_fields[
+                                idx
+                            ].field_description = sub_field_info.description
                         idx += 1
 
                     _stored_in_db = None
@@ -12348,11 +12330,7 @@ async def reload_model_cost_map(
                         {"interval_hours": None, "force_reload": True}
                     ),
                 },
-                "update": {
-                    "param_value": safe_dumps(
-                        {"interval_hours": existing_interval, "force_reload": True}
-                    )
-                },
+                "update": {"param_value": safe_dumps({"interval_hours": existing_interval, "force_reload": True})},
             },
         )
 
@@ -12687,9 +12665,7 @@ async def reload_anthropic_beta_headers(
         )
         existing_beta_interval = None
         if existing_beta_config and existing_beta_config.param_value:
-            existing_beta_interval = existing_beta_config.param_value.get(
-                "interval_hours"
-            )
+            existing_beta_interval = existing_beta_config.param_value.get("interval_hours")
 
         await prisma_client.db.litellm_config.upsert(
             where={"param_name": "anthropic_beta_headers_reload_config"},
@@ -12700,11 +12676,7 @@ async def reload_anthropic_beta_headers(
                         {"interval_hours": None, "force_reload": True}
                     ),
                 },
-                "update": {
-                    "param_value": safe_dumps(
-                        {"interval_hours": existing_beta_interval, "force_reload": True}
-                    )
-                },
+                "update": {"param_value": safe_dumps({"interval_hours": existing_beta_interval, "force_reload": True})},
             },
         )
 
