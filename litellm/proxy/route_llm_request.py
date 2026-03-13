@@ -301,12 +301,18 @@ async def route_request(  # noqa: PLR0915 - Complex routing function, refactorin
                 if model and llm_router:
                     try:
                         # Try to get deployment credentials for this model
-                        deployment_creds = llm_router.get_deployment_credentials(model_id=model)
+                        deployment_creds = llm_router.get_deployment_credentials(
+                            model_id=model
+                        )
                         if not deployment_creds:
                             # Try by model group name
-                            deployment = llm_router.get_deployment_by_model_group_name(model_group_name=model)
+                            deployment = llm_router.get_deployment_by_model_group_name(
+                                model_group_name=model
+                            )
                             if deployment and deployment.litellm_params:
-                                deployment_creds = deployment.litellm_params.model_dump(exclude_none=True)
+                                deployment_creds = deployment.litellm_params.model_dump(
+                                    exclude_none=True
+                                )
 
                         # If we found credentials, merge them into data (but don't override user-provided values)
                         if deployment_creds:
@@ -449,8 +455,7 @@ async def route_request(  # noqa: PLR0915 - Complex routing function, refactorin
             route=route_name,
             model_name=data.get("model", ""),
         )
-    
-    
+
     ### CUSTOM CORTECS LLM ROUTER INTERCEPTION ###
     # We attempt to invoke our custom LLMRouter logic. If successful, it bypasses
     # standard standard Litellm routing. If it fails or is not found, we fall back.
@@ -466,8 +471,12 @@ async def route_request(  # noqa: PLR0915 - Complex routing function, refactorin
     if route_type in ["aembedding"]:
         return _cortecs_router_instance.embedding_handler.handle_request(data, llm_call)
     elif route_type in ["atranscription"]:
-        return _cortecs_router_instance.transcription_handler.handle_request(data, llm_call)
+        return _cortecs_router_instance.transcription_handler.handle_request(
+            data, llm_call
+        )
     else:
-        return _cortecs_router_instance.completion_handler.handle_request(data, llm_call)
+        return _cortecs_router_instance.completion_handler.handle_request(
+            data, llm_call
+        )
 
     ### END CUSTOM CORTECS LLM ROUTER INTERCEPTION ###
