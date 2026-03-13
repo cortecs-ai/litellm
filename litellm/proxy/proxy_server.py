@@ -436,12 +436,10 @@ from litellm.proxy.openai_files_endpoints.files_endpoints import (
 )
 from litellm.proxy.pass_through_endpoints.llm_passthrough_endpoints import (
     passthrough_endpoint_router,
+    vertex_ai_live_websocket_passthrough,
 )
 from litellm.proxy.pass_through_endpoints.llm_passthrough_endpoints import (
     router as llm_passthrough_router,
-)
-from litellm.proxy.pass_through_endpoints.llm_passthrough_endpoints import (
-    vertex_ai_live_websocket_passthrough,
 )
 from litellm.proxy.pass_through_endpoints.pass_through_endpoints import (
     initialize_pass_through_endpoints,
@@ -534,21 +532,18 @@ from litellm.types.proxy.management_endpoints.ui_sso import (
 from litellm.types.realtime import RealtimeQueryParams
 from litellm.types.router import (
     DeploymentTypedDict,
-)
-from litellm.types.router import ModelInfo as RouterModelInfo
-from litellm.types.router import (
     RouterGeneralSettings,
     SearchToolTypedDict,
     updateDeployment,
 )
+from litellm.types.router import ModelInfo as RouterModelInfo
 from litellm.types.scheduler import DefaultPriorities
 from litellm.types.secret_managers.main import (
     KeyManagementSettings,
     KeyManagementSystem,
 )
-from litellm.types.utils import CredentialItem, CustomHuggingfaceTokenizer
+from litellm.types.utils import CredentialItem, CustomHuggingfaceTokenizer, RawRequestTypedDict, StandardLoggingPayload
 from litellm.types.utils import ModelInfo as ModelMapInfo
-from litellm.types.utils import RawRequestTypedDict, StandardLoggingPayload
 from litellm.utils import _add_custom_logger_callback_to_specific_event
 
 try:
@@ -1191,7 +1186,7 @@ try:
     # Validate packaged UI before proceeding
     if not _validate_ui_directory(packaged_ui_path):
         verbose_proxy_logger.error(
-            f"Packaged UI at {packaged_ui_path} is invalid or incomplete. " f"UI may not function correctly."
+            f"Packaged UI at {packaged_ui_path} is invalid or incomplete. UI may not function correctly."
         )
 
     # Decision tree for UI path selection:
@@ -4484,7 +4479,7 @@ class ProxyConfig:
             verbose_proxy_logger.debug("guardrails from the DB %s", str(guardrails_in_db))
             for guardrail in guardrails_in_db:
                 IN_MEMORY_GUARDRAIL_HANDLER.sync_guardrail_from_db(
-                    guardrail=cast(Guardrail, guardrail),
+                    guardrail=guardrail,
                 )
         except Exception as e:
             verbose_proxy_logger.exception(
@@ -5133,7 +5128,7 @@ class ProxyStartupEvent:
 
         # Only proceed if the feature is configured and enabled
         if not mcp_semantic_filter_config or not mcp_semantic_filter_config.get("enabled", False):
-            verbose_proxy_logger.debug("Semantic tool filter not configured or not enabled, " "skipping initialization")
+            verbose_proxy_logger.debug("Semantic tool filter not configured or not enabled, skipping initialization")
             return
 
         verbose_proxy_logger.debug(
@@ -5749,7 +5744,7 @@ class ProxyStartupEvent:
                     # pyroscope-io expects sample_rate as an integer
                     configure_kwargs["sample_rate"] = int(float(sample_rate_env))
                 except (ValueError, TypeError):
-                    raise ValueError("PYROSCOPE_SAMPLE_RATE must be a number, got: " f"{sample_rate_env!r}")
+                    raise ValueError(f"PYROSCOPE_SAMPLE_RATE must be a number, got: {sample_rate_env!r}")
             pyroscope.configure(**configure_kwargs)
             msg = (
                 f"LiteLLM: Pyroscope profiling started (app_name={app_name}, server_address={server_address}). "
@@ -6645,6 +6640,15 @@ async def audio_speech(
             hidden_params=hidden_params,
         )
 
+        # Call response headers hook
+        callback_headers = await proxy_logging_obj.post_call_response_headers_hook(
+            data=data,
+            user_api_key_dict=user_api_key_dict,
+            response=response,
+        )
+        if callback_headers:
+            custom_headers.update(callback_headers)
+
         # Determine media type based on model type
         media_type = "audio/mpeg"  # Default for OpenAI TTS
         request_model = data.get("model", "")
@@ -6798,6 +6802,15 @@ async def audio_transcriptions(
                 **additional_headers,
             )
         )
+
+        # Call response headers hook
+        callback_headers = await proxy_logging_obj.post_call_response_headers_hook(
+            data=data,
+            user_api_key_dict=user_api_key_dict,
+            response=response,
+        )
+        if callback_headers:
+            fastapi_response.headers.update(callback_headers)
 
         return response
     except Exception as e:
