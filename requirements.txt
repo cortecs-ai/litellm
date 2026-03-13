@@ -87,3 +87,4 @@ litellm-enterprise==0.1.33
 #######################
 pymongo==4.11.3
 asyncpg==0.30.0
+cachetools>=5.0.0,<7

@@ -665,7 +665,7 @@ files = [
     {file = "cachetools-6.2.2-py3-none-any.whl", hash = "sha256:6c09c98183bf58560c97b2abfcedcbaf6a896a490f534b031b661d3723b45ace"},
     {file = "cachetools-6.2.2.tar.gz", hash = "sha256:8e6d266b25e539df852251cfd6f990b4bc3a141db73b939058d809ebd2590fc6"},
 ]
-markers = {main = "extra == \"google\" or extra == \"extra-proxy\" or python_version >= \"3.10\"", proxy-dev = "python_version >= \"3.10\""}
+markers = {proxy-dev = "python_version >= \"3.10\""}
 
 [[package]]
 name = "certifi"
@@ -8140,4 +8140,4 @@ utils = ["numpydoc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "9c095c0b9e034ff3bc0f5242eda62aa5c71d8e25ebcc87b1315cf7c446269f2a"
+content-hash = "3dffd369c52a7b81fb06e4f0d8def801e4bbb3a6298d87871b0217b5e7668b0e"
