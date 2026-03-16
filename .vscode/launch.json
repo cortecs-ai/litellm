@@ -26,7 +26,7 @@
       "program": "${workspaceFolder}/litellm/proxy/proxy_cli.py",
       "args": [
         "--config",
-        "litellm/cortecs/proxy_config.yaml",
+        "litellm/cortecs/proxy_config_dev.yaml",
         "--debug"
         // "--detailed_debug"
       ],
