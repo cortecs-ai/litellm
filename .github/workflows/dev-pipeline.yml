@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+      - hotfix/*
+      - "#754-lite-llm" # TODO remove after approval of first version
 
 jobs:
   test:
