@@ -4,8 +4,7 @@ name: Dev CI/CD Pipeline
 on:
   push:
     branches:
-      - cortecs
-      - "#754-lite-llm"
+      - main
 
 jobs:
   test:
