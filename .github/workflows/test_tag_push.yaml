@@ -1,0 +1,28 @@
+name: Prod Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_version:
+        description: "Image version e.g. litellm-0.0.2"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      - name: Push tag to GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ github.event.inputs.image_version }}" -m "Release ${{ github.event.inputs.image_version }}"
+          git push origin "${{ github.event.inputs.image_version }}"
