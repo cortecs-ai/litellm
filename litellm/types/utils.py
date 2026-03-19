@@ -1682,7 +1682,6 @@ class StreamingChatCompletionChunk(OpenAIChatCompletionChunk):
         super().__init__(**kwargs)
 
 
-
 class ModelResponseBase(OpenAIObject):
     id: str
     """A unique identifier for the completion."""
@@ -2309,7 +2308,7 @@ class ImageResponse(OpenAIImageResponse, BaseLiteLLMOpenAIResponseObject):
             return self.dict()
 
 
-class TranscriptionUsageDurationObject(BaseModel):
+class TranscriptionUsageDurationObject(BaseLiteLLMOpenAIResponseObject):
     type: Literal["duration"]
     seconds: int
 
@@ -2319,7 +2318,7 @@ class TranscriptionUsageInputTokenDetailsObject(BaseModel):
     text_tokens: int
 
 
-class TranscriptionUsageTokensObject(BaseModel):
+class TranscriptionUsageTokensObject(BaseLiteLLMOpenAIResponseObject):
     type: Literal["tokens"]
     input_tokens: int
     output_tokens: int
@@ -3452,6 +3451,7 @@ LLMResponseTypes = Union[
     AnthropicMessagesResponse,
     ResponsesAPIResponse,
     LiteLLMSendMessageResponse,
+    TranscriptionResponse,
 ]
 
 

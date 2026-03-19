@@ -7163,6 +7163,15 @@ async def audio_speech(
             hidden_params=hidden_params,
         )
 
+        # Call response headers hook
+        callback_headers = await proxy_logging_obj.post_call_response_headers_hook(
+            data=data,
+            user_api_key_dict=user_api_key_dict,
+            response=response,
+        )
+        if callback_headers:
+            custom_headers.update(callback_headers)
+
         # Determine media type based on model type
         media_type = "audio/mpeg"  # Default for OpenAI TTS
         request_model = data.get("model", "")
@@ -7295,6 +7304,11 @@ async def audio_transcriptions(
             )
         )
 
+        ### CALL HOOKS ### - modify outgoing data
+        response = await proxy_logging_obj.post_call_success_hook(
+            data=data, user_api_key_dict=user_api_key_dict, response=response
+        )
+
         ### RESPONSE HEADERS ###
         hidden_params = getattr(response, "_hidden_params", {}) or {}
         model_id = hidden_params.get("model_id", None) or ""
@@ -7319,6 +7333,15 @@ async def audio_transcriptions(
                 **additional_headers,
             )
         )
+
+        # Call response headers hook
+        callback_headers = await proxy_logging_obj.post_call_response_headers_hook(
+            data=data,
+            user_api_key_dict=user_api_key_dict,
+            response=response,
+        )
+        if callback_headers:
+            fastapi_response.headers.update(callback_headers)
 
         return response
     except Exception as e:
@@ -13102,3 +13125,10 @@ async def dynamic_mcp_route(mcp_server_name: str, request: Request):
 app.mount(path=BASE_MCP_ROUTE, app=mcp_app)
 app.include_router(mcp_rest_endpoints_router)
 app.include_router(mcp_discoverable_endpoints_router)
+
+####
+# CORTECS Routes
+####
+from litellm.cortecs.backend.router.stats_router import router as stats_router
+
+app.include_router(stats_router, prefix="/stats")

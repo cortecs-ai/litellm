@@ -22,6 +22,8 @@ class NebiusConfig(OpenAIGPTConfig):
         for param, value in non_default_params.items():
             if param == "max_completion_tokens":
                 optional_params["max_tokens"] = value
+            if param == "reasoning_effort":
+                optional_params["reasoning_effort"] = value
             elif param in supported_openai_params:
                 optional_params[param] = value
         return optional_params

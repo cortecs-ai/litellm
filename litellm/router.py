@@ -1504,19 +1504,19 @@ class Router:
     @overload
     async def acompletion(
         self, model: str, messages: List[AllMessageValues], stream: Literal[True], **kwargs
-    ) -> CustomStreamWrapper: 
+    ) -> CustomStreamWrapper:
         ...
 
     @overload
     async def acompletion(
         self, model: str, messages: List[AllMessageValues], stream: Literal[False] = False, **kwargs
-    ) -> ModelResponse: 
+    ) -> ModelResponse:
         ...
 
     @overload
     async def acompletion(
         self, model: str, messages: List[AllMessageValues], stream: Union[Literal[True], Literal[False]] = False, **kwargs
-    ) -> Union[CustomStreamWrapper, ModelResponse]: 
+    ) -> Union[CustomStreamWrapper, ModelResponse]:
         ...
 
     # fmt: on
@@ -2562,13 +2562,13 @@ class Router:
     @overload
     async def schedule_acompletion(
         self, model: str, messages: List[AllMessageValues], priority: int, stream: Literal[False] = False, **kwargs
-    ) -> ModelResponse: 
+    ) -> ModelResponse:
         ...
-    
+
     @overload
     async def schedule_acompletion(
         self, model: str, messages: List[AllMessageValues], priority: int, stream: Literal[True], **kwargs
-    ) -> CustomStreamWrapper: 
+    ) -> CustomStreamWrapper:
         ...
 
     # fmt: on
@@ -5225,10 +5225,10 @@ class Router:
 
         if hasattr(original_exception, "message"):
             # add the available fallbacks to the exception
-            original_exception.message += ". Received Model Group={}\nAvailable Model Group Fallbacks={}".format(  # type: ignore
-                model_group,
-                fallback_model_group,
-            )
+            # original_exception.message += ". Received Model Group={}\nAvailable Model Group Fallbacks={}".format(  # type: ignore
+            #     model_group,
+            #     fallback_model_group,
+            # )
             if len(fallback_failure_exception_str) > 0:
                 original_exception.message += (  # type: ignore
                     "\nError doing the fallback: {}".format(
@@ -6530,7 +6530,7 @@ class Router:
             tiers = complexity_router_config.get("tiers", {})
             # Use MEDIUM tier as fallback default
             default_model = tiers.get("MEDIUM") or tiers.get("SIMPLE")
-        
+
         if default_model is None:
             raise ValueError(
                 "complexity_router_default_model is required for complexity-router deployments, "

@@ -107,7 +107,13 @@ class OpenAIWhisperAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
         """
         data = {"model": model, "file": audio_file, **optional_params}
 
-        if "response_format" not in data or (
+        if (
+            litellm_params.get("metadata", {})
+            .get("model_group", "")
+            .startswith("scaleway")
+        ):
+            data["response_format"] = "json"
+        elif "response_format" not in data or (
             data["response_format"] == "text" or data["response_format"] == "json"
         ):
             data["response_format"] = (
