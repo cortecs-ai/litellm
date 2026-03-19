@@ -81,3 +81,10 @@ pypdf>=6.6.2 # for PDF text extraction in RAG ingestion
 # LITELLM ENTERPRISE DEPENDENCIES
 ########################
 litellm-enterprise==0.1.33
+
+#######################
+# CORTECS DEPENDENCIES
+#######################
+pymongo==4.11.3
+asyncpg==0.30.0
+cachetools>=5.0.0,<7

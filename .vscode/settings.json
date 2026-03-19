@@ -1,0 +1,6 @@
+{
+  "ruff.configuration": "${workspaceFolder}/ruff.toml",
+  "ruff.nativeServer": false,
+  "editor.defaultFormatter": "ms-python.black-formatter",
+  "editor.formatOnSaveMode": "modifications"
+}

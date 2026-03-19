@@ -141,6 +141,10 @@ class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
         try:
             response_json = raw_response.json()
         except Exception:
+            # If the response is not JSON, but the request was successful, assume it's plain text (e.g. response_format="text")
+            if raw_response.status_code == 200:
+                return TranscriptionResponse(text=raw_response.text)
+
             raise OVHCloudException(
                 message=raw_response.text,
                 status_code=raw_response.status_code,

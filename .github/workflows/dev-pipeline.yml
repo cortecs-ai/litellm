@@ -1,0 +1,274 @@
+name: Dev CI/CD Pipeline
+
+# Triggers the workflow on push or pull request merge to the 'dev' branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install dependencies
+        run: |
+          poetry install --with dev,proxy-dev
+
+      - name: Run pytest for cortecs
+        run: poetry run pytest litellm/cortecs/
+
+  build_and_push:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Retrieve the last successful commit
+      - name: Get last successful commit
+        id: get_last_successful_commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_commit=$(git rev-parse HEAD)
+          last_successful_commit=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/dev-pipeline.yml/runs?status=success" \
+            | jq -r '.workflow_runs | first(.[]).head_commit.id')
+
+          # Store both commits in the GitHub environment
+          echo "current_commit=$current_commit" >> $GITHUB_ENV
+          echo "last_successful_commit=$last_successful_commit" >> $GITHUB_ENV
+
+      - name: Check for changes in backend
+        id: backend_changes
+        run: |
+          if [ -z "${{ env.last_successful_commit }}" ] || ! git cat-file -e "${{ env.last_successful_commit }}^{commit}" >/dev/null 2>&1; then
+            echo "No last successful commit found or invalid commit. Defaulting backend_changed to true."
+            backend_changed=true
+          else
+            echo "Comparing commits: ${{ env.last_successful_commit }} -> ${{ env.current_commit }}"
+            CHANGED_FILES=$(git diff --name-only "${{ env.last_successful_commit }}" "${{ env.current_commit }}")
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            backend_changed=false
+
+            # Check for backend changes
+            if echo "$CHANGED_FILES" | grep -q "^litellm/"; then
+              echo "Detected changes"
+              backend_changed=true
+            fi
+          fi
+
+          echo "backend_changed=$backend_changed" >> "$GITHUB_ENV"
+
+      - name: Retrieve latest image versions
+        run: |
+
+          BEARER=$(curl -s -X POST https://hub.docker.com/v2/users/login \
+            -H "Content-Type: application/json" \
+            -d '{"username": "'"${{ secrets.DOCKERHUB_USERNAME }}"'", "password": "'"${{ secrets.DOCKERHUB_TOKEN }}"'"}' | jq -r .token)
+
+
+          # Extract and increment backend version if backend changed
+          if [ "${{ env.backend_changed }}" == "true" ]; then
+            # Get Latest Backend Tag
+            LATEST_BACKEND_TAG=$(curl -s -X GET https://hub.docker.com/v2/namespaces/dockercortecs/repositories/web_app/tags?page_size=100 \
+              -H "Authorization: Bearer $BEARER" | jq -r '.results[] | select(.name | startswith("litellm")) | .name' | sort -V | tail -n 1)
+
+            if [ -z "$LATEST_BACKEND_TAG" ]; then
+              echo "No existing image tag found. Setting to default: 0.0.1"
+              LATEST_BACKEND_TAG="litellm-0.0.1"
+            fi
+
+            echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG" >> $GITHUB_ENV
+            echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG"
+            backend_version=$(echo "$LATEST_BACKEND_TAG" | grep -oP '(?<=litellm-)\d+\.\d+\.\d+')
+            IFS='.' read -r major minor patch <<< "$backend_version"
+            new_backend_version="$major.$minor.$((patch + 1))"
+            echo "NEW_BACKEND_VERSION=$new_backend_version" >> $GITHUB_ENV
+            echo "NEW_BACKEND_VERSION=$new_backend_version"
+          fi
+
+      - name: Build and push Docker images
+        run: |
+          # Navigate to the directory where the docker-compose.yml file is located
+          touch litellm/cortecs/.env
+          touch litellm/cortecs/proxy_config.yaml
+          cd litellm/cortecs/deployment/docker
+
+          if [ "${{ env.backend_changed }}" == "true" ]; then
+            export BACKEND_VERSION=${{ env.NEW_BACKEND_VERSION }}
+            echo "Building and pushing backend version $BACKEND_VERSION"
+            docker compose -f docker-compose.yml build litellm
+            docker compose -f docker-compose.yml push litellm
+            echo ${{ env.NEW_BACKEND_VERSION }} > backend_version.txt
+          fi
+
+      - name: Upload backend version artifact
+        if: env.backend_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend_version
+          path: litellm/cortecs/deployment/docker/backend_version.txt
+          retention-days: 1 # Retains artifact for 1 day
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "true"
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+
+      # Retrieve the last successful commit
+      - name: Get last successful commit
+        id: get_last_successful_commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_commit=$(git rev-parse HEAD)
+          last_successful_commit=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/dev-pipeline.yml/runs?status=success" \
+            | jq -r '.workflow_runs | first(.[]).head_commit.id')
+
+          # Store both commits in the GitHub environment
+          echo "current_commit=$current_commit" >> $GITHUB_ENV
+          echo "last_successful_commit=$last_successful_commit" >> $GITHUB_ENV
+
+      - name: Check for changes in backend
+        id: backend_changes
+        run: |
+          if [ -z "${{ env.last_successful_commit }}" ] || ! git cat-file -e "${{ env.last_successful_commit }}^{commit}" >/dev/null 2>&1; then
+            echo "No last successful commit found or invalid commit. Defaulting backend_changed to true."
+            backend_changed=true
+          else
+            echo "Comparing commits: ${{ env.last_successful_commit }} -> ${{ env.current_commit }}"
+            CHANGED_FILES=$(git diff --name-only "${{ env.last_successful_commit }}" "${{ env.current_commit }}")
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            backend_changed=false
+
+            # Check for backend changes
+            if echo "$CHANGED_FILES" | grep -q "^litellm/"; then
+              echo "Detected changes"
+              backend_changed=true
+            fi
+          fi
+
+          echo "backend_changed=$backend_changed" >> "$GITHUB_ENV"
+
+      # Download backend version artifact (only if backend has changed)
+      - name: Download backend version artifact
+        if: env.backend_changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: backend_version
+
+      - name: Set the Kubernetes context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: service-account
+          k8s-url: ${{ secrets.KUBERNETES_DEV_URL }}
+          k8s-secret: ${{ secrets.KUBERNETES_DEV_SECRET }}
+
+      # Update Kubernetes deployment for backend (if backend has changed)
+      - name: Update Kubernetes backend deployment
+        if: env.backend_changed == 'true'
+        run: |
+          echo "Updating backend deployment image..."
+          backend_version=$(cat backend_version.txt)
+          echo "backend version $backend_version"
+          # Update the deployment YAML file with the new image version
+          sed -i "s|web_app:litellm-.*|web_app:litellm-${backend_version}|" litellm/cortecs/deployment/kubernetes/litellm/dev/deployment_litellm_dev.yaml          # Apply the updated deployment
+          kubectl apply -f litellm/cortecs/deployment/kubernetes/litellm/dev
+          echo "Waiting for backend deployment to be ready..."
+          kubectl rollout status deployment/litellm -n web-app
+          echo "Current images for litellm:"
+          kubectl describe -n web-app deployment.apps/litellm | grep Image
+
+      # Verify backend deployment (if backend has changed)
+      - name: Verify backend deployment
+        if: env.backend_changed == 'true'
+        id: backend_rollout_status
+        run: |
+          kubectl rollout status -n web-app deployment.apps/litellm
+
+          # Wait for the job completion (timeout after 200s if not completed)
+          # kubectl wait --for=condition=complete --timeout=200s job/post-deployment-backend-tests -n web-app
+        continue-on-error: true
+
+      - name: Debug backend Pod Status after rollout
+        if: env.backend_changed == 'true'
+        run: |
+          echo "Pod statuses after backend rollout..."
+          kubectl get pods -n web-app -l app=litellm
+
+      # Rollback backend on failure
+      - name: Rollback backend on failure
+        if: env.backend_changed == 'true' && steps.backend_rollout_status.outcome == 'failure'
+        run: |
+          echo "Rolling back backend deployment..."
+          kubectl rollout undo -n web-app deployment/litellm
+          echo "Pod statuses after rollback..."
+          kubectl get pods -n web-app -l app=litellm
+
+      # Pipeline success notification for backend (if backend rollout succeeded and there were backend changes)
+      - name: Notify backend success
+        if: env.backend_changed == 'true' && steps.backend_rollout_status.outcome == 'success'
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"✅ Backend deployment succeeded in **${{ github.repository }}**\nBranch : **${{ github.ref_name }}**\nLaunched by : **${{ github.actor }}**\nBackend deployment completed successfully.\nLogs for more details: [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      # Rollback notification for backend
+      - name: Notify backend rollback
+        if: env.backend_changed == 'true' && steps.backend_rollout_status.outcome == 'failure'
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"❌ Backend deployment failed in **${{ github.repository }}**\nBranch : **${{ github.ref_name }}**\nLaunched by : **${{ github.actor }}**\nBackend rollback triggered.\nLogs for more details: [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # Stop the pipeline on failure
+          exit 1
+
+      # Notify no changes in litellm
+      - name: Notify no changes
+        if: env.backend_changed != 'true'
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"ℹ️ No changes detected in litellm **${{ github.repository }}**\nBranch : **${{ github.ref_name }}**\nLaunched by : **${{ github.actor }}**\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
