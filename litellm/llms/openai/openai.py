@@ -1067,6 +1067,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         shared_session: Optional["ClientSession"] = None,
     ):
         response = None
+        last_unprocessable_error = None
         data = provider_config.transform_request(
             model=model,
             messages=messages,
@@ -1078,7 +1079,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         data.update(
             self.get_stream_options(stream_options=stream_options, api_base=api_base)
         )
-        for _ in range(2):
+        for _ in range(3):
             try:
                 openai_aclient: AsyncOpenAI = self._get_openai_client(  # type: ignore
                     is_async=True,
@@ -1121,6 +1122,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                 return streamwrapper
             except openai.UnprocessableEntityError as e:
                 ## check if body contains unprocessable params - related issue https://github.com/BerriAI/litellm/issues/4800
+                last_unprocessable_error = e
                 if litellm.drop_params is True or drop_params is True:
                     data = drop_params_from_unprocessable_entity_error(e, data)
                 else:
@@ -1166,6 +1168,14 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                             headers=error_headers,
                             body=exception_body,
                         )
+
+        # If we exhausted all retries (e.g. repeated UnprocessableEntityError
+        # with drop_params=True), raise the last provider error instead of
+        # silently returning None
+        raise OpenAIError(
+            status_code=400,
+            message=str(last_unprocessable_error) if last_unprocessable_error else "Request failed after retrying. Check your request and try again.",
+        )
 
     def get_stream_options(
         self, stream_options: Optional[dict], api_base: Optional[str]
