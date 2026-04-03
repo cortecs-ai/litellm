@@ -336,7 +336,9 @@ class TestOpenAIResponsesAPIConfig:
             )
 
             assert isinstance(result, ImageGenerationPartialImageEvent)
-            assert result.type == ResponsesAPIStreamEvents.IMAGE_GENERATION_PARTIAL_IMAGE
+            assert (
+                result.type == ResponsesAPIStreamEvents.IMAGE_GENERATION_PARTIAL_IMAGE
+            )
             assert result.partial_image_index == idx
             assert result.b64_json == chunk["b64_json"]
 
@@ -686,15 +688,55 @@ class TestTransformListInputItemsRequest:
         # Assert
         assert "include" not in params  # Empty list should not be included
 
+    def test_openai_transform_compact_response_api_request_query_params_preserved(self):
+        """Test compact URL construction preserves query params and appends path."""
+        # Setup
+        azure_style_api_base = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
+
+        # Execute
+        url, data = self.openai_config.transform_compact_response_api_request(
+            model="gpt-5.2-codex",
+            input="hello",
+            response_api_optional_request_params={},
+            api_base=azure_style_api_base,
+            litellm_params=self.litellm_params,
+            headers=self.headers,
+        )
+
+        # Assert
+        assert (
+            url
+            == "https://test.openai.azure.com/openai/responses/compact?api-version=2024-05-01-preview"
+        )
+        assert data["model"] == "gpt-5.2-codex"
+        assert data["input"] == "hello"
+
+    def test_openai_transform_compact_response_api_request_path_without_query(self):
+        """Test compact URL construction for base URL without query params."""
+        # Execute
+        url, data = self.openai_config.transform_compact_response_api_request(
+            model="gpt-4o",
+            input="hello",
+            response_api_optional_request_params={},
+            api_base="https://api.openai.com/v1/responses",
+            litellm_params=self.litellm_params,
+            headers=self.headers,
+        )
+
+        # Assert
+        assert url == "https://api.openai.com/v1/responses/compact"
+        assert data["model"] == "gpt-4o"
+        assert data["input"] == "hello"
+
     def test_azure_transform_list_input_items_request_minimal(self):
         """Test Azure implementation with minimal parameters"""
         # Setup
-        azure_api_base = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
+        AZURE_AI_API_BASE = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
 
         # Execute
         url, params = self.azure_config.transform_list_input_items_request(
             response_id=self.response_id,
-            api_base=azure_api_base,
+            api_base=AZURE_AI_API_BASE,
             litellm_params=self.litellm_params,
             headers=self.headers,
         )
@@ -707,12 +749,12 @@ class TestTransformListInputItemsRequest:
     def test_azure_transform_list_input_items_request_url_construction(self):
         """Test Azure implementation URL construction with response_id in path"""
         # Setup
-        azure_api_base = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
+        AZURE_AI_API_BASE = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
 
         # Execute
         url, params = self.azure_config.transform_list_input_items_request(
             response_id=self.response_id,
-            api_base=azure_api_base,
+            api_base=AZURE_AI_API_BASE,
             litellm_params=self.litellm_params,
             headers=self.headers,
         )
@@ -726,12 +768,12 @@ class TestTransformListInputItemsRequest:
     def test_azure_transform_list_input_items_request_with_all_params(self):
         """Test Azure implementation with all optional parameters"""
         # Setup
-        azure_api_base = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
+        AZURE_AI_API_BASE = "https://test.openai.azure.com/openai/responses?api-version=2024-05-01-preview"
 
         # Execute
         url, params = self.azure_config.transform_list_input_items_request(
             response_id=self.response_id,
-            api_base=azure_api_base,
+            api_base=AZURE_AI_API_BASE,
             litellm_params=self.litellm_params,
             headers=self.headers,
             after="cursor_after_123",
@@ -1086,9 +1128,9 @@ class TestPhaseParameter:
                 phase = getattr(output_item, "phase", None)
 
             expected = "commentary" if idx == 0 else "final_answer"
-            assert phase == expected, (
-                f"output[{idx}] phase={phase!r}, expected {expected!r}"
-            )
+            assert (
+                phase == expected
+            ), f"output[{idx}] phase={phase!r}, expected {expected!r}"
 
     def test_streaming_output_item_done_preserves_phase(self):
         """OutputItemDoneEvent must preserve phase on its item."""

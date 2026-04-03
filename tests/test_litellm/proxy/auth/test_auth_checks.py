@@ -29,10 +29,13 @@ from litellm.proxy._types import (
 from litellm.proxy.auth.auth_checks import (
     ExperimentalUIJWTToken,
     _can_object_call_vector_stores,
+    _check_team_member_budget,
     _get_fuzzy_user_object,
     _get_team_db_check,
     _log_budget_lookup_failure,
+    _team_max_budget_check,
     _virtual_key_max_budget_alert_check,
+    _virtual_key_max_budget_check,
     _virtual_key_soft_budget_check,
     get_key_object,
     get_user_object,
@@ -377,6 +380,65 @@ async def test_default_internal_user_params_with_get_user_object(monkeypatch):
     assert creation_args["models"] == ["gpt-4", "claude-3-opus"]
     assert creation_args["max_budget"] == 200.0
     assert creation_args["user_role"] == "internal_user"
+
+
+@pytest.mark.asyncio
+async def test_get_user_object_upsert_includes_user_email():
+    """Test that user_email is included when creating a new user via get_user_object upsert"""
+    # Mock the necessary dependencies
+    mock_prisma_client = MagicMock()
+    mock_db = AsyncMock()
+    mock_prisma_client.db = mock_db
+
+    # Set up the user creation mock
+    mock_user = MagicMock()
+    mock_user.user_id = "new_test_user"
+    mock_user.user_email = "test@example.com"
+    mock_user.models = []
+    mock_user.max_budget = None
+    mock_user.user_role = None
+    mock_user.organization_memberships = []
+
+    mock_user.dict = lambda: {
+        "user_id": "new_test_user",
+        "user_email": "test@example.com",
+        "models": [],
+        "max_budget": None,
+        "user_role": None,
+        "organization_memberships": [],
+    }
+
+    # Setup the mock returns - user does not exist
+    mock_prisma_client.db.litellm_usertable.find_unique = AsyncMock(return_value=None)
+    mock_prisma_client.db.litellm_usertable.find_first = AsyncMock(return_value=None)
+    mock_prisma_client.db.litellm_usertable.create = AsyncMock(return_value=mock_user)
+
+    # Create a mock cache
+    mock_cache = MagicMock()
+    mock_cache.async_get_cache = AsyncMock(return_value=None)
+    mock_cache.async_set_cache = AsyncMock()
+
+    # Call get_user_object with user_id_upsert=True and user_email
+    try:
+        await get_user_object(
+            user_id="new_test_user",
+            prisma_client=mock_prisma_client,
+            user_api_key_cache=mock_cache,
+            user_id_upsert=True,
+            proxy_logging_obj=None,
+            user_email="test@example.com",
+        )
+    except Exception as e:
+        # May fail since mock object is not a real LiteLLM_UserTable
+        print(e)
+
+    # Verify the user was created with user_email included
+    mock_prisma_client.db.litellm_usertable.create.assert_called_once()
+    creation_args = mock_prisma_client.db.litellm_usertable.create.call_args[1]["data"]
+
+    assert "user_email" in creation_args, "user_email should be included when upserting a new user"
+    assert creation_args["user_email"] == "test@example.com"
+    assert creation_args["user_id"] == "new_test_user"
 
 
 def test_log_budget_lookup_failure_dry_run():
@@ -1570,3 +1632,151 @@ async def test_custom_auth_common_checks_opt_in():
             parent_otel_span=None,
         )
         mock_common.assert_called_once()
+
+
+# =====================================================================
+# Spend counter budget check tests (v2 — Redis-backed spend counters)
+# =====================================================================
+
+
+@pytest.mark.asyncio
+async def test_virtual_key_budget_check_reads_from_spend_counter():
+    """Budget check should use get_current_spend when counter exists,
+    even if cached object shows lower spend."""
+    from litellm.proxy.utils import ProxyLogging
+
+    valid_token = UserAPIKeyAuth(
+        token="test-hashed-token",
+        spend=0.0,  # stale — counter has 1.5
+        max_budget=1.0,
+        user_id="test-user",
+    )
+
+    proxy_logging_obj = ProxyLogging(user_api_key_cache=None)
+    proxy_logging_obj.budget_alerts = AsyncMock()
+
+    async def mock_get_current_spend(counter_key, fallback_spend):
+        if counter_key == "spend:key:test-hashed-token":
+            return 1.5
+        return fallback_spend
+
+    with patch(
+        "litellm.proxy.proxy_server.get_current_spend", mock_get_current_spend
+    ):
+        with pytest.raises(litellm.BudgetExceededError) as exc_info:
+            await _virtual_key_max_budget_check(
+                valid_token=valid_token,
+                proxy_logging_obj=proxy_logging_obj,
+            )
+        assert exc_info.value.current_cost == 1.5
+        assert exc_info.value.max_budget == 1.0
+
+
+@pytest.mark.asyncio
+async def test_virtual_key_budget_check_fallback_no_counter():
+    """When counter doesn't exist, budget check should fall back
+    to cached object's spend via fallback_spend."""
+    from litellm.proxy.utils import ProxyLogging
+
+    valid_token = UserAPIKeyAuth(
+        token="test-hashed-token",
+        spend=15.0,
+        max_budget=10.0,
+        user_id="test-user",
+    )
+
+    proxy_logging_obj = ProxyLogging(user_api_key_cache=None)
+    proxy_logging_obj.budget_alerts = AsyncMock()
+
+    # get_current_spend returns fallback_spend when no counter exists
+    async def mock_get_current_spend(counter_key, fallback_spend):
+        return fallback_spend
+
+    with patch(
+        "litellm.proxy.proxy_server.get_current_spend", mock_get_current_spend
+    ):
+        with pytest.raises(litellm.BudgetExceededError) as exc_info:
+            await _virtual_key_max_budget_check(
+                valid_token=valid_token,
+                proxy_logging_obj=proxy_logging_obj,
+            )
+        assert exc_info.value.current_cost == 15.0
+
+
+@pytest.mark.asyncio
+async def test_team_budget_check_reads_from_spend_counter():
+    """Team budget check should use get_current_spend when counter exists."""
+    from litellm.proxy.utils import ProxyLogging
+
+    team_object = LiteLLM_TeamTable(
+        team_id="test-team",
+        spend=0.0,  # stale
+        max_budget=1.0,
+    )
+    valid_token = UserAPIKeyAuth(token="test-token", team_id="test-team")
+
+    proxy_logging_obj = ProxyLogging(user_api_key_cache=None)
+    proxy_logging_obj.budget_alerts = AsyncMock()
+
+    async def mock_get_current_spend(counter_key, fallback_spend):
+        if counter_key == "spend:team:test-team":
+            return 1.5
+        return fallback_spend
+
+    with patch(
+        "litellm.proxy.proxy_server.get_current_spend", mock_get_current_spend
+    ):
+        with pytest.raises(litellm.BudgetExceededError) as exc_info:
+            await _team_max_budget_check(
+                team_object=team_object,
+                valid_token=valid_token,
+                proxy_logging_obj=proxy_logging_obj,
+            )
+        assert exc_info.value.current_cost == 1.5
+
+
+@pytest.mark.asyncio
+async def test_team_member_budget_check_reads_from_spend_counter():
+    """Team member budget check should use get_current_spend when counter exists."""
+    from litellm.proxy._types import LiteLLM_BudgetTable, LiteLLM_TeamMembership
+    from litellm.proxy.utils import ProxyLogging
+
+    team_object = LiteLLM_TeamTable(team_id="test-team")
+    user_object = LiteLLM_UserTable(user_id="test-user")
+    valid_token = UserAPIKeyAuth(
+        token="test-token",
+        user_id="test-user",
+        team_id="test-team",
+    )
+
+    team_membership = LiteLLM_TeamMembership(
+        user_id="test-user",
+        team_id="test-team",
+        spend=0.0,  # stale
+        litellm_budget_table=LiteLLM_BudgetTable(max_budget=1.0),
+    )
+
+    proxy_logging_obj = ProxyLogging(user_api_key_cache=None)
+
+    async def mock_get_current_spend(counter_key, fallback_spend):
+        if counter_key == "spend:team_member:test-user:test-team":
+            return 1.5
+        return fallback_spend
+
+    with patch(
+        "litellm.proxy.proxy_server.get_current_spend", mock_get_current_spend
+    ), patch(
+        "litellm.proxy.auth.auth_checks.get_team_membership",
+        new_callable=AsyncMock,
+        return_value=team_membership,
+    ):
+        with pytest.raises(litellm.BudgetExceededError) as exc_info:
+            await _check_team_member_budget(
+                team_object=team_object,
+                user_object=user_object,
+                valid_token=valid_token,
+                prisma_client=MagicMock(),
+                user_api_key_cache=MagicMock(),
+                proxy_logging_obj=proxy_logging_obj,
+            )
+        assert exc_info.value.current_cost == 1.5
