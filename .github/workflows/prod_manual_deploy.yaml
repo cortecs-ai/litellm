@@ -50,7 +50,7 @@ jobs:
 
 
           echo "Waiting for rollout..."
-          if ! kubectl rollout status deployment/litellm -n web-app --timeout=180s; then
+          if ! kubectl rollout status deployment/litellm -n web-app --timeout=360s; then
             echo "Rollout failed. Sending failure notification and attempting rollback."
             curl -H "Content-Type: application/json" -d "{\"content\":\"❌ Production deploy FAILED for image ${IMAGE} in **${{ github.repository }}**. Rolling back.\"}" "$WEBHOOK" || true
             kubectl rollout undo -n web-app deployment/litellm
