@@ -20,6 +20,15 @@
       "args": ["--prompt-number", "1"]
     },
     {
+      "name": "Warmup (Streaming)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env",
+      "args": ["--prompt-number", "1", "--stream"]
+    },
+    {
       "name": "LiteLLM Proxy (Poetry)",
       "type": "debugpy",
       "request": "launch",
