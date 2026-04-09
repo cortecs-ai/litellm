@@ -1640,6 +1640,26 @@ class Usage(SafeAttributeModel, CompletionUsage):
                     "cache_creation_input_tokens"
                 ]
 
+        # Normalize completion_tokens to include reasoning_tokens.
+        # Many OpenAI-compatible providers report reasoning_tokens separately
+        # (not included in completion_tokens), violating the OpenAI spec.
+        # When reasoning_tokens > completion_tokens, they are clearly not
+        # included, so we add them and update total_tokens accordingly.
+        _reasoning_tokens = (
+            _completion_tokens_details.reasoning_tokens
+            if _completion_tokens_details
+            and _completion_tokens_details.reasoning_tokens
+            else 0
+        )
+        if (
+            _reasoning_tokens
+            and completion_tokens is not None
+            and _reasoning_tokens > completion_tokens
+        ):
+            completion_tokens = completion_tokens + _reasoning_tokens
+            if total_tokens is not None:
+                total_tokens = total_tokens + _reasoning_tokens
+
         super().__init__(
             prompt_tokens=prompt_tokens or 0,
             completion_tokens=completion_tokens or 0,
