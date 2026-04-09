@@ -31,16 +31,16 @@ def test_router_timeouts():
             "model_name": "openai-gpt-4",
             "litellm_params": {
                 "model": "azure/gpt-4.1-mini",
-                "api_key": "os.environ/AZURE_API_KEY",
-                "api_base": "os.environ/AZURE_API_BASE",
+                "api_key": "os.environ/AZURE_AI_API_KEY",
+                "api_base": "os.environ/AZURE_AI_API_BASE",
                 "api_version": "os.environ/AZURE_API_VERSION",
             },
             "tpm": 80000,
         },
         {
-            "model_name": "anthropic-claude-3-5-haiku-20241022",
+            "model_name": "anthropic-claude-haiku-4-5",
             "litellm_params": {
-                "model": "claude-3-5-haiku-20241022",
+                "model": "claude-haiku-4-5",
                 "api_key": "os.environ/ANTHROPIC_API_KEY",
                 "mock_response": "hello world",
             },
@@ -49,7 +49,7 @@ def test_router_timeouts():
     ]
 
     fallbacks_list = [
-        {"openai-gpt-4": ["anthropic-claude-3-5-haiku-20241022"]},
+        {"openai-gpt-4": ["anthropic-claude-haiku-4-5"]},
     ]
 
     # Configure router

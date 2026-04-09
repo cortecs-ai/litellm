@@ -66,6 +66,15 @@ async def spend_key_fn():
         )
 
 
+def _strip_password_from_users(users) -> None:
+    """Strip password field from a list of user objects."""
+    for user in users if isinstance(users, list) else [users]:
+        if user and hasattr(user, "__dict__"):
+            user.__dict__.pop("password", None)
+        elif isinstance(user, dict):
+            user.pop("password", None)
+
+
 @router.get(
     "/spend/users",
     tags=["Budget & Spend Tracking"],
@@ -105,13 +114,15 @@ async def spend_user_fn(
             user_info = await prisma_client.get_data(
                 table_name="user", query_type="find_unique", user_id=user_id
             )
-            return [user_info]
+            result = [user_info]
         else:
             user_info = await prisma_client.get_data(
                 table_name="user", query_type="find_all"
             )
+            result = user_info
 
-        return user_info
+        _strip_password_from_users(result)
+        return result
 
     except Exception as e:
         raise HTTPException(
@@ -1461,11 +1472,21 @@ async def _get_spend_report_for_time_range(
     dependencies=[Depends(user_api_key_auth)],
     responses={
         200: {
-            "cost": {
-                "description": "The calculated cost",
-                "example": 0.0,
-                "type": "float",
-            }
+            "description": "The calculated cost",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "cost": {
+                                "type": "number",
+                                "description": "The calculated cost",
+                                "example": 0.0,
+                            }
+                        },
+                    }
+                }
+            },
         }
     },
 )
@@ -1672,7 +1693,8 @@ async def ui_view_spend_logs(  # noqa: PLR0915
         default=None, description="Filter logs by model"
     ),
     model_id: Optional[str] = fastapi.Query(
-        default=None, description="Filter logs by model ID (litellm model deployment id)"
+        default=None,
+        description="Filter logs by model ID (litellm model deployment id)",
     ),
     key_alias: Optional[str] = fastapi.Query(
         default=None, description="Filter logs by key alias"
@@ -1726,7 +1748,13 @@ async def ui_view_spend_logs(  # noqa: PLR0915
         )
 
     # Validate sort_by and sort_order
-    valid_sort_fields = {"spend", "total_tokens", "startTime", "endTime", "request_duration_ms"}
+    valid_sort_fields = {
+        "spend",
+        "total_tokens",
+        "startTime",
+        "endTime",
+        "request_duration_ms",
+    }
     if sort_by not in valid_sort_fields:
         raise ProxyException(
             message=f"Invalid sort_by: {sort_by}. Must be one of: {', '.join(sorted(valid_sort_fields))}",
@@ -1753,7 +1781,11 @@ async def ui_view_spend_logs(  # noqa: PLR0915
                     return datetime.strptime(date_str, fmt).replace(tzinfo=timezone.utc)
                 except ValueError:
                     continue
-            expected = "'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'" if is_v2 else "'YYYY-MM-DD HH:MM:SS'"
+            expected = (
+                "'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'"
+                if is_v2
+                else "'YYYY-MM-DD HH:MM:SS'"
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid date format: {date_str}. Expected: {expected}",
@@ -1796,22 +1828,28 @@ async def ui_view_spend_logs(  # noqa: PLR0915
         # Build metadata filters
         metadata_filters = []
         if key_alias is not None:
-            metadata_filters.append({
-                "path": ["user_api_key_alias"],
-                "string_contains": key_alias,
-            })
+            metadata_filters.append(
+                {
+                    "path": ["user_api_key_alias"],
+                    "string_contains": key_alias,
+                }
+            )
 
         if error_code is not None:
-            metadata_filters.append({
-                "path": ["error_information", "error_code"],
-                "equals": f'"{error_code}"',
-            })
+            metadata_filters.append(
+                {
+                    "path": ["error_information", "error_code"],
+                    "equals": f'"{error_code}"',
+                }
+            )
 
         if error_message is not None:
-            metadata_filters.append({
-                "path": ["error_information", "error_message"],
-                "string_contains": error_message,
-            })
+            metadata_filters.append(
+                {
+                    "path": ["error_information", "error_message"],
+                    "string_contains": error_message,
+                }
+            )
 
         if metadata_filters:
             if len(metadata_filters) == 1:
@@ -1919,16 +1957,24 @@ async def ui_view_spend_logs(  # noqa: PLR0915
             sql_params.append(f"%{key_alias}%")
             p += 1
         if error_code is not None:
-            sql_conditions.append(f"metadata->'error_information'->>'error_code' = ${p}")
+            sql_conditions.append(
+                f"metadata->'error_information'->>'error_code' = ${p}"
+            )
             sql_params.append(error_code)
             p += 1
         if error_message is not None:
-            sql_conditions.append(f"metadata->'error_information'->>'error_message' LIKE ${p}")
+            sql_conditions.append(
+                f"metadata->'error_information'->>'error_message' LIKE ${p}"
+            )
             sql_params.append(f"%{error_message}%")
             p += 1
 
         # Quote column names that need quoting in SQL
-        _sql_col = f'"{order_column}"' if order_column in ("startTime", "endTime") else order_column
+        _sql_col = (
+            f'"{order_column}"'
+            if order_column in ("startTime", "endTime")
+            else order_column
+        )
         _sql_dir = "ASC" if order_direction == "asc" else "DESC"
 
         sql_query = f"""
@@ -3218,7 +3264,9 @@ async def ui_view_session_spend_logs(
             ORDER BY "startTime" ASC
             LIMIT $2 OFFSET $3
         """
-        result = await prisma_client.db.query_raw(sql_query, session_id, page_size, skip)
+        result = await prisma_client.db.query_raw(
+            sql_query, session_id, page_size, skip
+        )
 
         total_pages = (total_records + page_size - 1) // page_size
 
@@ -3280,9 +3328,17 @@ async def _build_ui_spend_logs_response(
     if enrich_session_counts:
         session_ids = list(
             {
-                (row.get("session_id") if isinstance(row, dict) else getattr(row, "session_id", None))
+                (
+                    row.get("session_id")
+                    if isinstance(row, dict)
+                    else getattr(row, "session_id", None)
+                )
                 for row in data
-                if (row.get("session_id") if isinstance(row, dict) else getattr(row, "session_id", None))
+                if (
+                    row.get("session_id")
+                    if isinstance(row, dict)
+                    else getattr(row, "session_id", None)
+                )
             }
         )
         if session_ids:
@@ -3304,11 +3360,7 @@ async def _build_ui_spend_logs_response(
     if enrich_session_counts:
         enriched: List[dict] = []
         for row in data:
-            row_dict = (
-                dict(row)
-                if isinstance(row, dict)
-                else row.model_dump()
-            )
+            row_dict = dict(row) if isinstance(row, dict) else row.model_dump()
             sid = row_dict.get("session_id")
             row_dict["session_total_count"] = count_map.get(sid, 1) if sid else 1
             enriched.append(row_dict)
@@ -3383,7 +3435,11 @@ def _can_user_view_spend_log(user_api_key_dict: UserAPIKeyAuth) -> bool:
     """
     user_role = user_api_key_dict.user_role
     user_id = user_api_key_dict.user_id
-    return user_role in (
-        LitellmUserRoles.INTERNAL_USER,
-        LitellmUserRoles.INTERNAL_USER_VIEW_ONLY,
-    ) and user_id is not None
+    return (
+        user_role
+        in (
+            LitellmUserRoles.INTERNAL_USER,
+            LitellmUserRoles.INTERNAL_USER_VIEW_ONLY,
+        )
+        and user_id is not None
+    )
