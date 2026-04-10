@@ -17,7 +17,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1"]
+      "args": ["--prompt-number", "1", "--disable-normalization", "--disable-throughput-measurement"]
     },
     {
       "name": "Warmup (Streaming)",
@@ -26,7 +26,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1", "--stream"]
+      "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--disable-throughput-measurement"]
     },
     {
       "name": "LiteLLM Proxy (Poetry)",
