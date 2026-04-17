@@ -224,14 +224,24 @@ def get_vertex_base_model_name(model: str) -> str:
     return model
 
 
+VERTEX_AI_MULTI_REGION_LOCATIONS = {"eu", "us"}
+
+
 def get_vertex_base_url(
     vertex_location: Optional[str],
 ) -> str:
     """
     Get the base URL for Vertex AI API calls.
+
+    Handles three URL patterns:
+    - Global: https://aiplatform.googleapis.com
+    - Multi-region (eu, us): https://aiplatform.{location}.rep.googleapis.com
+    - Single region: https://{location}-aiplatform.googleapis.com
     """
     if vertex_location == "global":
         return "https://aiplatform.googleapis.com"
+    elif vertex_location in VERTEX_AI_MULTI_REGION_LOCATIONS:
+        return f"https://aiplatform.{vertex_location}.rep.googleapis.com"
     else:
         return f"https://{vertex_location}-aiplatform.googleapis.com"
 
