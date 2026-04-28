@@ -110,9 +110,11 @@ class MistralConfig(OpenAIGPTConfig):
             "parallel_tool_calls",
         ]
 
-        # Add reasoning support for magistral models
+        # Add reasoning support for magistral models and mistral-small
         if "magistral" in model.lower():
             supported_params.extend(["thinking", "reasoning_effort"])
+        elif "mistral-small" in model.lower():
+            supported_params.append("reasoning_effort")
 
         return supported_params
 
@@ -184,9 +186,12 @@ class MistralConfig(OpenAIGPTConfig):
                 optional_params["extra_body"] = {"random_seed": value}
             if param == "response_format":
                 optional_params["response_format"] = value
-            if param == "reasoning_effort" and "magistral" in model.lower():
-                # Flag that we need to add reasoning system prompt
-                optional_params["_add_reasoning_prompt"] = True
+            if param == "reasoning_effort":
+                if "magistral" in model.lower():
+                   # Flag that we need to add reasoning system prompt
+                    optional_params["_add_reasoning_prompt"] = True
+                else:
+                    optional_params["reasoning_effort"] = value
             if param == "thinking" and "magistral" in model.lower():
                 # Flag that we need to add reasoning system prompt
                 optional_params["_add_reasoning_prompt"] = True
