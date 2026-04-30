@@ -160,6 +160,7 @@ class OpenAIGPTConfig(BaseLLMModelInfo, BaseConfig):
             "extra_headers",
             "parallel_tool_calls",
             "audio",
+            "reasoning_effort",
             "web_search_options",
             "service_tier",
             "safety_identifier",
