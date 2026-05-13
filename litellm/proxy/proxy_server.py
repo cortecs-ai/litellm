@@ -6763,11 +6763,9 @@ async def model_list(
     - tag: One or more tags to filter by (defaults to ["Instruct"]).
     - currency: ISO currency code for pricing conversion (defaults to "EUR").
     """
-    from litellm.cortecs.backend.services.serverless_model_service import (
-        ServerlessModelService,
-    )
+    from litellm.cortecs.backend.services.model_service import ModelService
 
-    service = ServerlessModelService()
+    service = ModelService()
     return await asyncio.to_thread(
         service.get_models_for_openai, currency or "EUR", tag
     )
@@ -6796,11 +6794,9 @@ async def model_info(
     Follows OpenAI API specification for individual model retrieval.
     https://platform.openai.com/docs/api-reference/models/retrieve
     """
-    from litellm.cortecs.backend.services.serverless_model_service import (
-        ServerlessModelService,
-    )
+    from litellm.cortecs.backend.services.model_service import ModelService
 
-    service = ServerlessModelService()
+    service = ModelService()
     return await asyncio.to_thread(service.get_model_info, model_id)
 
 
