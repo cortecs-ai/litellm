@@ -557,11 +557,7 @@ class ProxyBaseLLMRequestProcessing:
                 headers.update(logging_caching_headers)
 
         try:
-            return {
-                key: str(value)
-                for key, value in headers.items()
-                if value not in exclude_values
-            }
+            return {} # CORTECS: remove custom headers
         except Exception as e:
             verbose_proxy_logger.error(f"Error setting custom headers: {e}")
             return {}
