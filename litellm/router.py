@@ -5410,7 +5410,7 @@ class Router:
                     return response
 
                 else:
-                    error_message = "model={}. context_window_fallbacks={}. fallbacks={}.\n\nSet 'context_window_fallback' - https://docs.litellm.ai/docs/routing#fallbacks".format(
+                    error_message = "model={}. context_window_fallbacks={}. fallbacks={}.\n\nSet 'context_window_fallback'".format(
                         model_group, context_window_fallbacks, fallbacks
                     )
                     verbose_router_logger.info(
@@ -5445,7 +5445,7 @@ class Router:
                     )
                     return response
                 else:
-                    error_message = "model={}. content_policy_fallback={}. fallbacks={}.\n\nSet 'content_policy_fallback' - https://docs.litellm.ai/docs/routing#fallbacks".format(
+                    error_message = "model={}. content_policy_fallback={}. fallbacks={}.\n\nSet 'content_policy_fallback'".format(
                         model_group, content_policy_fallbacks, fallbacks
                     )
                     verbose_router_logger.info(

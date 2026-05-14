@@ -87,6 +87,10 @@ class ExceptionCheckers:
             "input tokens exceed the configured limit",
             "`inputs` tokens + `max_new_tokens` must be",
             "exceeds the maximum number of tokens allowed",  # Gemini
+            "maximum context length",  
+            "context length is only",  
+            "input is too long for requested model",  
+            "length limit exceeded",  
         ]
         for substring in known_exception_substrings:
             if substring in _error_str_lowercase:
@@ -998,6 +1002,7 @@ def exception_type(  # type: ignore  # noqa: PLR0915
                     or "prompt is too long" in error_str
                     or "prompt: length: 1.." in error_str
                     or "Too many input tokens" in error_str
+                    or "length limit exceeded" in error_str
                 ):
                     exception_mapping_worked = True
                     raise ContextWindowExceededError(
