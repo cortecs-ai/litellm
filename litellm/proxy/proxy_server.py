@@ -13695,4 +13695,4 @@ app.include_router(mcp_discoverable_endpoints_router)
 ####
 from litellm.cortecs.backend.router.stats_router import router as stats_router
 
-app.include_router(stats_router, prefix="/stats")
+app.include_router(stats_router, prefix="/stats", dependencies=[Depends(user_api_key_auth)])
