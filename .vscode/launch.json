@@ -29,6 +29,24 @@
       "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--disable-throughput-measurement"]
     },
     {
+      "name": "Warmup (Anthropic)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env",
+      "args": ["--prompt-number", "1", "--disable-normalization", "--disable-throughput-measurement", "--use-anthropic"]
+    },
+    {
+      "name": "Warmup (Anthropic Streaming)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/litellm/cortecs/.env",
+      "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--disable-throughput-measurement", "--use-anthropic"]
+    },
+    {
       "name": "LiteLLM Proxy (Poetry)",
       "type": "debugpy",
       "request": "launch",
