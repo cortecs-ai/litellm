@@ -336,7 +336,7 @@ def anthropic_messages_handler(
         custom_llm_provider=custom_llm_provider,
     )
     (
-        model,
+        _model,
         custom_llm_provider,
         dynamic_api_key,
         dynamic_api_base,
@@ -426,7 +426,7 @@ def anthropic_messages_handler(
         )
     )
     return base_llm_http_handler.anthropic_messages_handler(
-        model=model,
+        model=_model,
         messages=messages,
         anthropic_messages_provider_config=anthropic_messages_provider_config,
         anthropic_messages_optional_request_params=dict(
