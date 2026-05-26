@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - "#71-frontend-backend-split" #TEMPORARY FOR TESTING
 
 jobs:
   test:
