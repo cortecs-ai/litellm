@@ -6753,134 +6753,21 @@ class ProxyStartupEvent:
 )  # if project requires model list
 async def model_list(
     user_api_key_dict: UserAPIKeyAuth = Depends(user_api_key_auth),
-    return_wildcard_routes: Optional[bool] = False,
-    team_id: Optional[str] = None,
-    include_model_access_groups: Optional[bool] = False,
-    only_model_access_groups: Optional[bool] = False,
-    include_metadata: Optional[bool] = False,
-    fallback_type: Optional[str] = None,
-    scope: Optional[str] = None,
+    tag: Optional[List[str]] = Query(default=None),
+    currency: Optional[str] = "EUR",
 ):
     """
-    Use `/model/info` - to get detailed model information, example - pricing, mode, etc.
-
-    This is just for compatibility with openai projects like aider.
+    OpenAI-compatible model list backed by the Cortecs serverless model catalog.
 
     Query Parameters:
-    - include_metadata: Include additional metadata in the response with fallback information
-    - fallback_type: Type of fallbacks to include ("general", "context_window", "content_policy")
-                    Defaults to "general" when include_metadata=true
-    - scope: Optional scope parameter. Currently only accepts "expand".
-             When scope=expand is passed, proxy admins, team admins, and org admins
-             will receive all proxy models as if they are a proxy admin.
+    - tag: One or more tags to filter by (defaults to ["Instruct"]).
+    - currency: ISO currency code for pricing conversion (defaults to "EUR").
     """
-    global llm_model_list, general_settings, llm_router, prisma_client, user_api_key_cache, proxy_logging_obj
+    from litellm.cortecs.backend.services.model_service import ModelService
 
-    from litellm.proxy.management_endpoints.common_utils import (
-        _user_has_admin_privileges,
-    )
-    from litellm.proxy.utils import (
-        create_model_info_response,
-        get_available_models_for_user,
-    )
-
-    # Validate scope parameter if provided
-    if scope is not None and scope != "expand":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid scope parameter. Only 'expand' is currently supported. Received: {scope}",
-        )
-
-    # Check if scope=expand is requested and user has admin privileges
-    should_expand_scope = False
-    if scope == "expand":
-        should_expand_scope = await _user_has_admin_privileges(
-            user_api_key_dict=user_api_key_dict,
-            prisma_client=prisma_client,
-            user_api_key_cache=user_api_key_cache,
-            proxy_logging_obj=proxy_logging_obj,
-        )
-
-    # If scope=expand and user has admin privileges, return all proxy models
-    if should_expand_scope:
-        # Get all proxy models as if user is a proxy admin
-        if llm_router is None:
-            proxy_model_list = []
-            model_access_groups = {}
-        else:
-            proxy_model_list = llm_router.get_model_names()
-            model_access_groups = llm_router.get_model_access_groups()
-
-        # Include model access groups if requested
-        if include_model_access_groups:
-            proxy_model_list = list(
-                set(proxy_model_list + list(model_access_groups.keys()))
-            )
-
-        # Get complete model list including wildcard routes if requested
-        from litellm.proxy.auth.model_checks import get_complete_model_list
-
-        all_models = get_complete_model_list(
-            key_models=[],
-            team_models=[],
-            proxy_model_list=proxy_model_list,
-            user_model=None,
-            infer_model_from_keys=False,
-            return_wildcard_routes=return_wildcard_routes or False,
-            llm_router=llm_router,
-            model_access_groups=model_access_groups,
-            include_model_access_groups=include_model_access_groups or False,
-            only_model_access_groups=only_model_access_groups or False,
-        )
-
-        # Build response data with all proxy models
-        model_data = []
-        for model in all_models:
-            model_info = create_model_info_response(
-                model_id=model,
-                provider="openai",
-                include_metadata=include_metadata or False,
-                fallback_type=fallback_type,
-                llm_router=llm_router,
-            )
-            model_data.append(model_info)
-
-        return dict(
-            data=model_data,
-            object="list",
-        )
-
-    # Otherwise, use the normal behavior (current implementation)
-    # Get available models for the user
-    all_models = await get_available_models_for_user(
-        user_api_key_dict=user_api_key_dict,
-        llm_router=llm_router,
-        general_settings=general_settings,
-        user_model=user_model,
-        prisma_client=prisma_client,
-        proxy_logging_obj=proxy_logging_obj,
-        team_id=team_id,
-        include_model_access_groups=include_model_access_groups or False,
-        only_model_access_groups=only_model_access_groups or False,
-        return_wildcard_routes=return_wildcard_routes or False,
-        user_api_key_cache=user_api_key_cache,
-    )
-
-    # Build response data
-    model_data = []
-    for model in all_models:
-        model_info = create_model_info_response(
-            model_id=model,
-            provider="openai",
-            include_metadata=include_metadata or False,
-            fallback_type=fallback_type,
-            llm_router=llm_router,
-        )
-        model_data.append(model_info)
-
-    return dict(
-        data=model_data,
-        object="list",
+    service = ModelService()
+    return await asyncio.to_thread(
+        service.get_models_for_openai, currency or "EUR", tag
     )
 
 
@@ -6907,54 +6794,10 @@ async def model_info(
     Follows OpenAI API specification for individual model retrieval.
     https://platform.openai.com/docs/api-reference/models/retrieve
     """
-    global llm_model_list, general_settings, llm_router, prisma_client, user_api_key_cache, proxy_logging_obj
+    from litellm.cortecs.backend.services.model_service import ModelService
 
-    from litellm.proxy.utils import (
-        create_model_info_response,
-        get_available_models_for_user,
-        validate_model_access,
-    )
-
-    # Get available models for the user
-    all_models = await get_available_models_for_user(
-        user_api_key_dict=user_api_key_dict,
-        llm_router=llm_router,
-        general_settings=general_settings,
-        user_model=user_model,
-        prisma_client=prisma_client,
-        proxy_logging_obj=proxy_logging_obj,
-        team_id=None,
-        include_model_access_groups=False,
-        only_model_access_groups=False,
-        return_wildcard_routes=False,
-        user_api_key_cache=user_api_key_cache,
-    )
-
-    # Validate that the requested model is accessible
-    validate_model_access(model_id=model_id, available_models=all_models)
-
-    # Get provider information from the router deployment
-    if llm_router is None:
-        raise HTTPException(status_code=500, detail="Router not initialized")
-
-    deployment = llm_router.get_deployment_by_model_group_name(model_id)
-    if deployment is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Model '{model_id}' not found in router configuration",
-        )
-
-    # Use the actual litellm model from the deployment to get provider info
-    _, provider, _, _ = litellm.get_llm_provider(model=deployment.litellm_params.model)
-
-    # Return the model information in the same format as the list endpoint
-    return create_model_info_response(
-        model_id=model_id,
-        provider=provider,
-        include_metadata=False,
-        fallback_type=None,
-        llm_router=llm_router,
-    )
+    service = ModelService()
+    return await asyncio.to_thread(service.get_model_info, model_id)
 
 
 @router.post(
@@ -13852,4 +13695,4 @@ app.include_router(mcp_discoverable_endpoints_router)
 ####
 from litellm.cortecs.backend.router.stats_router import router as stats_router
 
-app.include_router(stats_router, prefix="/stats")
+app.include_router(stats_router, prefix="/stats", dependencies=[Depends(user_api_key_auth)])

@@ -144,6 +144,8 @@ MCP_HEALTH_CHECK_TIMEOUT = float(os.getenv("LITELLM_MCP_HEALTH_CHECK_TIMEOUT", "
 LITELLM_UI_ALLOW_HEADERS = [
     "x-litellm-semantic-filter",
     "x-litellm-semantic-filter-tools",
+    "x-cortecs-provider",
+    "x-cortecs-model",
 ]
 
 # Gemini model-specific minimal thinking budget constants
