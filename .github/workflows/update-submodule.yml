@@ -1,0 +1,45 @@
+name: Auto-update Cortecs submodule
+
+on:
+  repository_dispatch:
+    types: [cortecs-submodule-updated]
+
+jobs:
+  update_submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout litellm repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GIT_LLM_ROUTER_TOKEN }}
+          submodules: "true"
+          fetch-depth: 0
+
+      - name: Update submodule to latest main
+        run: |
+          cd litellm/cortecs
+          git fetch origin main
+          git checkout origin/main
+
+      - name: Check if submodule pointer changed
+        id: check_changes
+        run: |
+          if git diff --quiet litellm/cortecs; then
+            echo "No submodule changes detected. Skipping."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Submodule pointer has changed."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push updated submodule pointer
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          CORTECS_SHA=$(cd litellm/cortecs && git rev-parse --short HEAD)
+
+          git add litellm/cortecs
+          git commit -m "chore: update cortecs submodule to ${CORTECS_SHA}"
+          git push origin main
