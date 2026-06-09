@@ -17,6 +17,10 @@ from typing import (
 from urllib.parse import urlparse
 
 import httpx
+import json as _json
+from openai.types.create_embedding_response import (
+                    CreateEmbeddingResponse,
+                )
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -1212,6 +1216,30 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         - call embeddings.create by default
         """
         try:
+            if "encoding_format" not in data:
+                _url = str(openai_aclient.base_url).rstrip("/") + "/embeddings"
+                _hdrs = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {openai_aclient.api_key}",
+                }
+                _SDK_KEYS = {"extra_body", "extra_headers", "extra_query",
+                             "timeout", "user_config"}
+                _body = {k: v for k, v in data.items()
+                         if k not in _SDK_KEYS and not k.startswith("_")}
+                _resp = await openai_aclient._client.post(
+                    _url,
+                    content=_json.dumps(_body),
+                    headers=_hdrs,
+                    timeout=timeout,
+                )
+                if _resp.status_code != 200:
+                    raise OpenAIError(
+                        status_code=_resp.status_code,
+                        message=_resp.text,
+                    )
+                headers = dict(_resp.headers)
+                response = CreateEmbeddingResponse.model_validate(_resp.json())
+                return headers, response
             raw_response = await openai_aclient.embeddings.with_raw_response.create(
                 **data, timeout=timeout
             )  # type: ignore
