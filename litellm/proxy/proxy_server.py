@@ -7518,6 +7518,10 @@ async def audio_speech(
         )
         response = await llm_call
 
+        response = await proxy_logging_obj.post_call_success_hook(
+            data=data, user_api_key_dict=user_api_key_dict, response=response
+        )
+
         ### ALERTING ###
         asyncio.create_task(
             proxy_logging_obj.update_request_status(
@@ -7586,7 +7590,22 @@ async def audio_speech(
             )
         )
         verbose_proxy_logger.debug(traceback.format_exc())
-        raise e
+        if isinstance(e, HTTPException):
+            raise ProxyException(
+                message=getattr(e, "message", str(e.detail)),
+                type=getattr(e, "type", "None"),
+                param=getattr(e, "param", "None"),
+                code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
+            )
+        else:
+            error_msg = f"{str(e)}"
+            raise ProxyException(
+                message=getattr(e, "message", error_msg),
+                type=getattr(e, "type", "None"),
+                param=getattr(e, "param", "None"),
+                openai_code=getattr(e, "code", None),
+                code=getattr(e, "status_code", 500),
+            )
 
 
 @router.post(

@@ -21,6 +21,8 @@ import json as _json
 from openai.types.create_embedding_response import (
                     CreateEmbeddingResponse,
                 )
+import base64
+import json
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -1613,7 +1615,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
             input=input,
             **optional_params,
         )
-        return HttpxBinaryResponseContent(response=response.response)
+        return self._maybe_decode_audio_response(response.response)
 
     async def async_audio_speech(
         self,
@@ -1650,7 +1652,50 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
             **optional_params,
         )
 
-        return HttpxBinaryResponseContent(response=response.response)
+        return self._maybe_decode_audio_response(response.response)
+
+    @staticmethod
+    def _maybe_decode_audio_response(
+        response: httpx.Response,
+    ) -> HttpxBinaryResponseContent:
+        """
+        Some providers (e.g. Mistral) return speech audio as base64 JSON
+        instead of raw binary. Detect and decode transparently.
+        """
+        content_type = response.headers.get("content-type", "")
+        if "application/json" in content_type:
+            try:
+                import base64
+                import json
+
+                data = json.loads(response.content)
+                if isinstance(data, dict) and "audio_data" in data:
+                    audio_bytes = base64.b64decode(data["audio_data"])
+                    ct = OpenAIChatCompletion._detect_audio_content_type(
+                        audio_bytes
+                    )
+                    decoded_response = httpx.Response(
+                        status_code=response.status_code,
+                        content=audio_bytes,
+                        headers={"content-type": ct},
+                    )
+                    return HttpxBinaryResponseContent(response=decoded_response)
+            except (json.JSONDecodeError, ValueError, KeyError):
+                pass  # Not decodable JSON audio — return original
+        return HttpxBinaryResponseContent(response=response)
+
+    @staticmethod
+    def _detect_audio_content_type(data: bytes) -> str:
+        """Detect audio MIME type from magic bytes in the header."""
+        if data[:4] == b"RIFF":
+            return "audio/wav"
+        if data[:3] == b"ID3" or data[:2] in (b"\xff\xfb", b"\xff\xf3"):
+            return "audio/mpeg"
+        if data[:4] == b"fLaC":
+            return "audio/flac"
+        if data[:4] == b"OggS":
+            return "audio/ogg"
+        return "application/octet-stream"
 
 
 class OpenAIFilesAPI(BaseLLM):

@@ -582,9 +582,12 @@ async def route_request(  # noqa: PLR0915 - Complex routing function, refactorin
         return _cortecs_router_instance.transcription_handler.handle_request(
             data, llm_call
         )
+    elif route_type in ["aspeech"]:
+        return _cortecs_router_instance.speech_handler.handle_request(data, llm_call)
     else:
         return _cortecs_router_instance.completion_handler.handle_request(
             data, llm_call
         )
 
     ### END CUSTOM CORTECS LLM ROUTER INTERCEPTION ###
+
