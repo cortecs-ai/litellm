@@ -7108,6 +7108,23 @@ def speech(  # noqa: PLR0915
             **kwargs,
         )
 
+    elif custom_llm_provider == "ovhcloud":
+        from litellm.llms.ovhcloud.text_to_speech.handler import ovhcloud_speech
+
+        api_base = api_base or get_secret("OVHCLOUD_API_BASE")
+        api_key = api_key or litellm.api_key or get_secret("OVHCLOUD_API_KEY")
+
+        response = ovhcloud_speech(
+            model=model,
+            input=input,
+            voice=voice,
+            optional_params=optional_params,
+            api_key=api_key,
+            api_base=api_base,
+            timeout=timeout,
+            aspeech=aspeech,
+        )
+
     if response is None:
         raise Exception(
             "Unable to map the custom llm provider={} to a known provider={}.".format(
