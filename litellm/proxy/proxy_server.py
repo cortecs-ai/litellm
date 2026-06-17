@@ -13708,10 +13708,3 @@ async def dynamic_mcp_route(mcp_server_name: str, request: Request):
 app.mount(path=BASE_MCP_ROUTE, app=mcp_app)
 app.include_router(mcp_rest_endpoints_router)
 app.include_router(mcp_discoverable_endpoints_router)
-
-####
-# CORTECS Routes
-####
-from litellm.cortecs.backend.router.stats_router import router as stats_router
-
-app.include_router(stats_router, prefix="/stats", dependencies=[Depends(user_api_key_auth)])
