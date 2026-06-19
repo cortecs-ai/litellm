@@ -365,6 +365,7 @@ def exception_type(  # type: ignore  # noqa: PLR0915
                 or custom_llm_provider == "custom_openai"
                 or custom_llm_provider in litellm.openai_compatible_providers
                 or custom_llm_provider == "mistral"
+                or custom_llm_provider == "ovhcloud"
             ):
                 # custom_llm_provider is openai, make it OpenAI
                 message = get_error_message(error_obj=original_exception)
@@ -2410,6 +2411,7 @@ def exception_type(  # type: ignore  # noqa: PLR0915
                             method="POST", url="https://api.openai.com/v1/"
                         ),
                     )
+
         if (
             "BadRequestError.__init__() missing 1 required positional argument: 'param'"
             in str(original_exception)

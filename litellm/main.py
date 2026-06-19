@@ -7114,6 +7114,14 @@ def speech(  # noqa: PLR0915
         api_base = api_base or get_secret("OVHCLOUD_API_BASE")
         api_key = api_key or litellm.api_key or get_secret("OVHCLOUD_API_KEY")
 
+        _riva_fields = ("language_code", "voice_name", "sample_rate_hz", "encoding")
+        for _field in _riva_fields:
+            if _field in kwargs:
+                optional_params[_field] = kwargs[_field]
+        _extra_body = kwargs.get("extra_body")
+        if _extra_body and isinstance(_extra_body, dict):
+            optional_params.update(_extra_body)
+
         response = ovhcloud_speech(
             model=model,
             input=input,
