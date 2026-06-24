@@ -6831,8 +6831,7 @@ async def model_info(
     allowed_providers: Optional[List[str]] = Query(default=None),
     eu_native: Optional[bool] = None,
     allow_quantization: Optional[bool] = None,
-    allow_zero_data_retention: Optional[bool] = None,
-    extended: bool = False,
+    allow_zero_data_retention: Optional[bool] = None
 ):
     """
     Retrieve information about a specific model accessible to your API key.
@@ -6877,7 +6876,7 @@ async def model_info(
         filter_data.get("eu_native", False),
         filter_data.get("allow_quantization", True),
         filter_data.get("allow_zero_data_retention", False),
-        extended,
+        True,
     )
 
 
