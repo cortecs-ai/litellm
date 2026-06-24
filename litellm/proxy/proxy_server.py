@@ -6755,6 +6755,10 @@ async def model_list(
     user_api_key_dict: UserAPIKeyAuth = Depends(user_api_key_auth),
     tag: Optional[List[str]] = Query(default=None),
     currency: Optional[str] = "EUR",
+    allowed_providers: Optional[List[str]] = Query(default=None),
+    eu_native: Optional[bool] = None,
+    allow_quantization: Optional[bool] = None,
+    allow_zero_data_retention: Optional[bool] = None,
 ):
     """
     OpenAI-compatible model list backed by the Cortecs serverless model catalog.
@@ -6762,12 +6766,47 @@ async def model_list(
     Query Parameters:
     - tag: One or more tags to filter by (defaults to ["Instruct"]).
     - currency: ISO currency code for pricing conversion (defaults to "EUR").
+    - allowed_providers: Restrict to models available on at least one of the
+      listed providers.
+    - eu_native: When true, only return models hosted by EU-native providers.
+    - allow_quantization: When false, exclude quantized model variants.
+    - allow_zero_data_retention: When true, only return models from
+      zero-data-retention providers.
     """
     from litellm.cortecs.backend.services.model_service import ModelService
+    from litellm.cortecs.backend.services.project_config_service import (
+        ProjectConfigService,
+    )
+
+    filter_data: dict = {}
+    if allowed_providers is not None:
+        filter_data["allowed_providers"] = allowed_providers
+    if eu_native is not None:
+        filter_data["eu_native"] = eu_native
+    if allow_quantization is not None:
+        filter_data["allow_quantization"] = allow_quantization
+    if allow_zero_data_retention is not None:
+        filter_data["allow_zero_data_retention"] = allow_zero_data_retention
+
+    # Apply per-project inference config defaults when the caller is authenticated
+    project_id = (
+        getattr(user_api_key_dict, "project_id", None)
+        if user_api_key_dict is not None
+        else None
+    )
+    if project_id:
+        config_service = ProjectConfigService()
+        filter_data = await config_service.apply_to_request(filter_data, project_id)
 
     service = ModelService()
     return await asyncio.to_thread(
-        service.get_models_for_openai, currency or "EUR", tag
+        service.get_models_for_openai,
+        currency or "EUR",
+        tag,
+        filter_data.get("allowed_providers"),
+        filter_data.get("eu_native", False),
+        filter_data.get("allow_quantization", True),
+        filter_data.get("allow_zero_data_retention", False),
     )
 
 
