@@ -421,6 +421,58 @@ class OpenAIGPTConfig(BaseLLMModelInfo, BaseConfig):
                 )
         return messages, tools
 
+    @staticmethod
+    def _is_tensorix_request(litellm_params: dict) -> bool:
+        api_base = litellm_params.get("api_base")
+        if api_base is None:
+            return False
+        return str(api_base).rstrip("/") == "https://api.tensorix.ai/v1"
+
+    @staticmethod
+    def _map_tensorix_reasoning_params(optional_params: dict) -> None:
+        """
+        Tensorix expects reasoning controls under chat_template_kwargs instead of
+        OpenAI's top-level reasoning_effort.
+        """
+        reasoning_effort = optional_params.get("reasoning_effort")
+        thinking = optional_params.get("thinking")
+
+        if reasoning_effort is None and thinking is None:
+            return
+
+        extra_body = optional_params.setdefault("extra_body", {})
+        if not isinstance(extra_body, dict):
+            return
+
+        chat_template_kwargs = extra_body.setdefault("chat_template_kwargs", {})
+        if not isinstance(chat_template_kwargs, dict):
+            return
+
+        disable_thinking = False
+        if isinstance(thinking, dict):
+            thinking_type = thinking.get("type")
+            if thinking_type == "disabled":
+                disable_thinking = True
+                chat_template_kwargs.setdefault("enable_thinking", False)
+            elif thinking_type == "enabled":
+                chat_template_kwargs.setdefault("enable_thinking", True)
+
+        if isinstance(reasoning_effort, str):
+            if reasoning_effort in ("none", "off"):
+                disable_thinking = True
+                chat_template_kwargs.setdefault("enable_thinking", False)
+            elif not disable_thinking and reasoning_effort in (
+                "low",
+                "medium",
+                "high",
+                "max",
+            ):
+                chat_template_kwargs.setdefault("enable_thinking", True)
+                chat_template_kwargs.setdefault(
+                    "reasoning_effort",
+                    "max" if reasoning_effort == "xhigh" else reasoning_effort,
+                )
+
     def transform_request(
         self,
         model: str,
@@ -443,6 +495,9 @@ class OpenAIGPTConfig(BaseLLMModelInfo, BaseConfig):
             optional_params["tools"] = tools
 
         optional_params.pop("max_retries", None)
+
+        if self._is_tensorix_request(litellm_params=litellm_params):
+            self._map_tensorix_reasoning_params(optional_params=optional_params)
 
         return {
             "model": model,
@@ -471,6 +526,8 @@ class OpenAIGPTConfig(BaseLLMModelInfo, BaseConfig):
         )
         if tools is not None and len(tools) > 0:
             optional_params["tools"] = tools
+        if self._is_tensorix_request(litellm_params=litellm_params):
+            self._map_tensorix_reasoning_params(optional_params=optional_params)
         if self.__class__._is_base_class:
             return {
                 "model": model,
