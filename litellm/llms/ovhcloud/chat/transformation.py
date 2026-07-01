@@ -26,27 +26,27 @@ class OVHCloudChatConfig(OpenAIGPTConfig):
         Details about function calling support can be found here:
         https://help.ovhcloud.com/csm/en-gb-public-cloud-ai-endpoints-function-calling?id=kb_article_view&sysparm_article=KB0071907
         """
-        supports_function_calling: Optional[bool] = None
-        try:
-            model_info = _get_model_info_helper(model, custom_llm_provider="ovhcloud")
-            supports_function_calling = model_info.get(
-                "supports_function_calling", None
-            )
-            if supports_function_calling is None:
-                supports_function_calling = False
-        except Exception as e:
-            verbose_logger.debug(f"Error getting supported OpenAI params: {e}")
-            supports_function_calling = False
+        # supports_function_calling: Optional[bool] = None
+        # try:
+        #     model_info = _get_model_info_helper(model, custom_llm_provider="ovhcloud")
+        #     supports_function_calling = model_info.get(
+        #         "supports_function_calling", None
+        #     )
+        #     if supports_function_calling is None:
+        #         supports_function_calling = False
+        # except Exception as e:
+        #     verbose_logger.debug(f"Error getting supported OpenAI params: {e}")
+        #     supports_function_calling = False
 
         optional_params = super().get_supported_openai_params(model)
-        if supports_function_calling is not True:
-            verbose_logger.debug(
-                "You can see our models supporting function_calling in our catalog: https://endpoints.ai.cloud.ovh.net/catalog "
-            )
-            optional_params.remove("tools")
-            optional_params.remove("tool_choice")
-            optional_params.remove("function_call")
-            optional_params.remove("response_format")
+        # if supports_function_calling is not True:
+        #     verbose_logger.debug(
+        #         "You can see our models supporting function_calling in our catalog: https://endpoints.ai.cloud.ovh.net/catalog "
+        #     )
+        #     optional_params.remove("tools")
+        #     optional_params.remove("tool_choice")
+        #     optional_params.remove("function_call")
+        #     optional_params.remove("response_format")
         return optional_params
 
     def get_complete_url(
