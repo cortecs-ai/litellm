@@ -17,7 +17,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1", "--disable-normalization", "--disable-throughput-measurement"]
+      "args": ["--prompt-number", "1", "--disable-normalization"]
     },
     {
       "name": "Warmup (Streaming)",
@@ -26,7 +26,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--disable-throughput-measurement"]
+      "args": ["--prompt-number", "1", "--stream", "--disable-normalization"]
     },
     {
       "name": "Warmup (Anthropic)",
@@ -35,7 +35,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1", "--disable-normalization", "--disable-throughput-measurement", "--use-anthropic"]
+      "args": ["--prompt-number", "1", "--disable-normalization", "--use-anthropic"]
     },
     {
       "name": "Warmup (Anthropic Streaming)",
@@ -44,7 +44,7 @@
       "program": "${workspaceFolder}/litellm/cortecs/llm_router/warmup/__main__.py",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/litellm/cortecs/.env",
-      "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--disable-throughput-measurement", "--use-anthropic"]
+      "args": ["--prompt-number", "1", "--stream", "--disable-normalization", "--use-anthropic"]
     },
     {
       "name": "LiteLLM Proxy (Poetry)",
