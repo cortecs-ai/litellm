@@ -131,9 +131,7 @@ class ToolPolicyGuardrail(CustomGuardrail):
             tool_names = [
                 t["function"]["name"]
                 for t in tools
-                if isinstance(t, dict)
-                and isinstance(t.get("function"), dict)
-                and t["function"].get("name")
+                if isinstance(t, dict) and isinstance(t.get("function"), dict) and t["function"].get("name")
             ]
             if not tool_names:
                 route = _get_request_route_from_data(request_data)
@@ -189,9 +187,7 @@ class ToolPolicyGuardrail(CustomGuardrail):
         # For each tool with input_policy=trusted, check if conversation
         # contains output from tools with output_policy=untrusted
         if input_type == "response":
-            trusted_input_tools = [
-                name for name in tool_names if policy_map.get(name) == "trusted"
-            ]
+            trusted_input_tools = [name for name in tool_names if policy_map.get(name) == "trusted"]
             if trusted_input_tools:
                 messages = request_data.get("messages") or []
                 tc_id_to_name = _resolve_tool_names_from_messages(messages)

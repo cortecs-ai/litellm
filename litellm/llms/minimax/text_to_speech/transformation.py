@@ -202,12 +202,8 @@ class MinimaxTextToSpeechConfig(BaseTextToSpeechConfig):
 
         return headers
 
-    def get_error_class(
-        self, error_message: str, status_code: int, headers: Union[dict, Headers]
-    ) -> BaseLLMException:
-        return MinimaxException(
-            message=error_message, status_code=status_code, headers=headers
-        )
+    def get_error_class(self, error_message: str, status_code: int, headers: Union[dict, Headers]) -> BaseLLMException:
+        return MinimaxException(message=error_message, status_code=status_code, headers=headers)
 
     def transform_text_to_speech_request(
         self,

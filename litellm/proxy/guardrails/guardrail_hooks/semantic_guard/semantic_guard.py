@@ -83,10 +83,7 @@ class SemanticGuardrail(CustomGuardrail):
         )
 
         if not routes:
-            raise ValueError(
-                "SemanticGuardrail: no routes configured. "
-                "Provide route_templates or custom_routes."
-            )
+            raise ValueError("SemanticGuardrail: no routes configured. Provide route_templates or custom_routes.")
 
         self.semantic_router: "SemanticRouter" = (
             SemanticGuardRouteLoader.build_semantic_router(
@@ -112,9 +109,7 @@ class SemanticGuardrail(CustomGuardrail):
         call_type: str,
     ):
         """Check user messages against semantic routes before LLM call."""
-        messages = self.get_guardrails_messages_for_call_type(
-            call_type=CallTypes(call_type), data=data
-        )
+        messages = self.get_guardrails_messages_for_call_type(call_type=CallTypes(call_type), data=data)
         if not messages:
             return None
 
@@ -179,19 +174,31 @@ def _extract_user_text(messages: List) -> str:
             if isinstance(content, str):
                 return content
             if isinstance(content, list):
-                return " ".join(
-                    block.get("text", "") if isinstance(block, dict) else str(block)
-                    for block in content
-                )
+                return " ".join(block.get("text", "") if isinstance(block, dict) else str(block) for block in content)
     return ""
 
 
 def _extract_response_text(response: Any) -> str:
-    """Extract text from LLM response object."""
+    """Extract text from every LLM response choice."""
     if hasattr(response, "choices") and response.choices:
-        choice = response.choices[0]
-        if hasattr(choice, "message") and choice.message:
-            return choice.message.content or ""
+        text_parts: List[str] = []
+        for choice in response.choices:
+            if hasattr(choice, "message") and choice.message:
+                text = _content_to_text(choice.message.content)
+                if text:
+                    text_parts.append(text)
+        return "\n".join(text_parts)
+    return ""
+
+
+def _content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = [
+            block.get("text") for block in content if isinstance(block, dict) and isinstance(block.get("text"), str)
+        ]
+        return " ".join(part for part in text_parts if part)
     return ""
 
 
@@ -203,10 +210,7 @@ def _handle_match(
     data: dict,
 ) -> None:
     """Block or passthrough based on config."""
-    violation_msg = (
-        f"Request blocked by semantic guardrail '{guardrail.guardrail_name}'. "
-        f"Matched route: {route_name}"
-    )
+    violation_msg = f"Request blocked by semantic guardrail '{guardrail.guardrail_name}'. Matched route: {route_name}"
 
     detection_info = {
         "route_name": route_name,
@@ -215,8 +219,7 @@ def _handle_match(
     }
 
     verbose_logger.warning(
-        f"SemanticGuard match: route={route_name}, score={similarity_score}, "
-        f"action={guardrail.on_flagged_action}"
+        f"SemanticGuard match: route={route_name}, score={similarity_score}, action={guardrail.on_flagged_action}"
     )
 
     if guardrail.on_flagged_action == "passthrough":
