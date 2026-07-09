@@ -40,17 +40,11 @@ class ResponsesSessionHandler:
             ChatCompletionSession,
         )
 
-        verbose_proxy_logger.debug(
-            "inside get_chat_completion_message_history_for_previous_response_id"
-        )
+        verbose_proxy_logger.debug("inside get_chat_completion_message_history_for_previous_response_id")
         all_spend_logs: List[
             SpendLogsPayload
-        ] = await ResponsesSessionHandler.get_all_spend_logs_for_previous_response_id(
-            previous_response_id
-        )
-        verbose_proxy_logger.debug(
-            "found %s spend logs for this response id", len(all_spend_logs)
-        )
+        ] = await ResponsesSessionHandler.get_all_spend_logs_for_previous_response_id(previous_response_id)
+        verbose_proxy_logger.debug("found %s spend logs for this response id", len(all_spend_logs))
 
         litellm_session_id: Optional[str] = None
         if len(all_spend_logs) > 0:
@@ -66,9 +60,11 @@ class ResponsesSessionHandler:
             ]
         ] = []
         for spend_log in all_spend_logs:
-            chat_completion_message_history = await ResponsesSessionHandler.extend_chat_completion_message_with_spend_log_payload(
-                spend_log=spend_log,
-                chat_completion_message_history=chat_completion_message_history,
+            chat_completion_message_history = (
+                await ResponsesSessionHandler.extend_chat_completion_message_with_spend_log_payload(
+                    spend_log=spend_log,
+                    chat_completion_message_history=chat_completion_message_history,
+                )
             )
 
         verbose_proxy_logger.debug(
@@ -161,9 +157,7 @@ class ResponsesSessionHandler:
         """
         Get the parsed proxy server request from the spend log
         """
-        proxy_server_request: Union[str, dict] = (
-            spend_log.get("proxy_server_request") or "{}"
-        )
+        proxy_server_request: Union[str, dict] = spend_log.get("proxy_server_request") or "{}"
         proxy_server_request_dict: Optional[dict] = None
         if isinstance(proxy_server_request, dict):
             proxy_server_request_dict = proxy_server_request
@@ -185,8 +179,10 @@ class ResponsesSessionHandler:
             )
             if cold_storage_object_key:
                 # Use the object key directly from metadata
-                _proxy_server_request_dict = await ResponsesSessionHandler.get_proxy_server_request_from_cold_storage_with_object_key(
-                    object_key=cold_storage_object_key,
+                _proxy_server_request_dict = (
+                    await ResponsesSessionHandler.get_proxy_server_request_from_cold_storage_with_object_key(
+                        object_key=cold_storage_object_key,
+                    )
                 )
             if _proxy_server_request_dict:
                 proxy_server_request_dict = _proxy_server_request_dict
@@ -237,8 +233,10 @@ class ResponsesSessionHandler:
             "inside get_proxy_server_request_from_cold_storage_with_object_key..."
         )
 
-        proxy_server_request_dict = await COLD_STORAGE_HANDLER.get_proxy_server_request_from_cold_storage_with_object_key(
-            object_key=object_key,
+        proxy_server_request_dict = (
+            await COLD_STORAGE_HANDLER.get_proxy_server_request_from_cold_storage_with_object_key(
+                object_key=object_key,
+            )
         )
 
         return proxy_server_request_dict
@@ -281,14 +279,8 @@ class ResponsesSessionHandler:
 
         verbose_proxy_logger.debug("decoding response id=%s", previous_response_id)
 
-        decoded_response_id = (
-            ResponsesAPIRequestUtils._decode_responses_api_response_id(
-                previous_response_id
-            )
-        )
-        previous_response_id = decoded_response_id.get(
-            "response_id", previous_response_id
-        )
+        decoded_response_id = ResponsesAPIRequestUtils._decode_responses_api_response_id(previous_response_id)
+        previous_response_id = decoded_response_id.get("response_id", previous_response_id)
         if prisma_client is None:
             return []
 

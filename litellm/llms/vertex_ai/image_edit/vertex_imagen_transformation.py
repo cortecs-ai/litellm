@@ -49,11 +49,7 @@ class VertexAIImagenImageEditConfig(BaseImageEditConfig, VertexLLM):
         drop_params: bool,
     ) -> Dict[str, Any]:
         supported_params = self.get_supported_openai_params(model)
-        filtered_params = {
-            key: value
-            for key, value in image_edit_optional_params.items()
-            if key in supported_params
-        }
+        filtered_params = {key: value for key, value in image_edit_optional_params.items() if key in supported_params}
 
         mapped_params: Dict[str, Any] = {}
 
@@ -103,10 +99,18 @@ class VertexAIImagenImageEditConfig(BaseImageEditConfig, VertexLLM):
         headers: dict,
         model: str,
         api_key: Optional[str] = None,
+        litellm_params: Optional[dict] = None,
+        api_base: Optional[str] = None,
     ) -> dict:
         headers = headers or {}
-        vertex_project = self._resolve_vertex_project()
-        vertex_credentials = self._resolve_vertex_credentials()
+        litellm_params = litellm_params or {}
+
+        _api_base = litellm_params.get("api_base") or api_base
+        if _api_base is not None:
+            return headers
+
+        vertex_project = self.safe_get_vertex_ai_project(litellm_params) or self._resolve_vertex_project()
+        vertex_credentials = self.safe_get_vertex_ai_credentials(litellm_params) or self._resolve_vertex_credentials()
         access_token, _ = self._ensure_access_token(
             credentials=vertex_credentials,
             project_id=vertex_project,
@@ -123,8 +127,8 @@ class VertexAIImagenImageEditConfig(BaseImageEditConfig, VertexLLM):
         """
         Get the complete URL for Vertex AI Imagen predict API
         """
-        vertex_project = self._resolve_vertex_project()
-        vertex_location = self._resolve_vertex_location()
+        vertex_project = self.safe_get_vertex_ai_project(litellm_params) or self._resolve_vertex_project()
+        vertex_location = self.safe_get_vertex_ai_location(litellm_params) or self._resolve_vertex_location()
 
         if not vertex_project or not vertex_location:
             raise ValueError(
@@ -293,9 +297,7 @@ class VertexAIImagenImageEditConfig(BaseImageEditConfig, VertexLLM):
 
         return reference_images
 
-    def _read_all_bytes(
-        self, image: Any, depth: int = 0, max_depth: int = DEFAULT_MAX_RECURSE_DEPTH
-    ) -> bytes:
+    def _read_all_bytes(self, image: Any, depth: int = 0, max_depth: int = DEFAULT_MAX_RECURSE_DEPTH) -> bytes:
         if depth > max_depth:
             raise ValueError(
                 f"Max recursion depth {max_depth} reached while reading image bytes for Vertex AI Imagen image edit."
@@ -348,18 +350,19 @@ class VertexAIImagenImageEditConfig(BaseImageEditConfig, VertexLLM):
             if stream_pos is not None:
                 image.seek(stream_pos)
             return data
-        if isinstance(image, (str, Path)):
-            path_obj = Path(image)
-            if not path_obj.exists():
-                raise ValueError(
-                    f"Mask/image path does not exist for Vertex AI Imagen image edit: {path_obj}"
-                )
-            return path_obj.read_bytes()
+        if isinstance(image, str):
+            raise ValueError(
+                "Unsupported image input: plain string values are not accepted for "
+                "Vertex AI Imagen image edit. Provide image bytes or a file-like object."
+            )
+        if isinstance(image, Path):
+            raise ValueError(
+                "Unsupported image input: filesystem paths are not accepted for "
+                "Vertex AI Imagen image edit. Provide image bytes or a file-like object."
+            )
         if hasattr(image, "read"):
             data = image.read()
             if isinstance(data, str):
                 data = data.encode("utf-8")
             return data
-        raise ValueError(
-            f"Unsupported image type for Vertex AI Imagen image edit. Got type={type(image)}"
-        )
+        raise ValueError(f"Unsupported image type for Vertex AI Imagen image edit. Got type={type(image)}")

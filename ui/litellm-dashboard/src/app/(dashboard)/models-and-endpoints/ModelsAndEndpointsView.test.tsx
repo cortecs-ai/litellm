@@ -120,18 +120,68 @@ describe("ModelsAndEndpointsView", () => {
     const queryClient = createQueryClient();
     const { findByText } = render(
       <QueryClientProvider client={queryClient}>
-        <ModelsAndEndpointsView
-          token="123"
-          modelData={{ data: [] }}
-          keys={[]}
-          setModelData={() => {}}
-          premiumUser={false}
-          teams={[]}
-        />
+        <ModelsAndEndpointsView premiumUser={false} teams={[]} />
       </QueryClientProvider>,
     );
     expect(await findByText("Model Management", {}, { timeout: 10000 })).toBeInTheDocument();
-  }, 15000);
+  });
+
+  it("should show Missing provider banner by default", async () => {
+    localStorageMock.clear();
+    const queryClient = createQueryClient();
+    const { findByText } = render(
+      <QueryClientProvider client={queryClient}>
+        <ModelsAndEndpointsView premiumUser={false} teams={[]} />
+      </QueryClientProvider>,
+    );
+    expect(await findByText("Missing a provider?", {}, { timeout: 10000 })).toBeInTheDocument();
+  });
+
+  it("should hide Missing provider banner when dismiss button is clicked and persist to localStorage", async () => {
+    localStorageMock.clear();
+    const queryClient = createQueryClient();
+    const { findByText, queryByText, container } = render(
+      <QueryClientProvider client={queryClient}>
+        <ModelsAndEndpointsView premiumUser={false} teams={[]} />
+      </QueryClientProvider>,
+    );
+
+    // Wait for banner to appear
+    expect(await findByText("Missing a provider?", {}, { timeout: 10000 })).toBeInTheDocument();
+
+    // Find and click dismiss button (X button)
+    const dismissButton = container.querySelector('button[aria-label="Dismiss banner"]');
+    expect(dismissButton).not.toBeNull();
+    fireEvent.click(dismissButton!);
+
+    // Banner should be hidden
+    expect(queryByText("Missing a provider?")).not.toBeInTheDocument();
+
+    // LocalStorage should be updated
+    expect(localStorageMock.getItem("hideMissingProviderBanner")).toBe("true");
+  });
+
+  it("should show compact Request Provider button when banner is dismissed", async () => {
+    // Set localStorage to hide banner
+    localStorageMock.setItem("hideMissingProviderBanner", "true");
+    const queryClient = createQueryClient();
+    const { findByText, queryByText } = render(
+      <QueryClientProvider client={queryClient}>
+        <ModelsAndEndpointsView premiumUser={false} teams={[]} />
+      </QueryClientProvider>,
+    );
+
+    // Wait for component to render
+    await findByText("Model Management", {}, { timeout: 10000 });
+
+    // Banner should not be visible
+    expect(queryByText("Missing a provider?")).not.toBeInTheDocument();
+
+    // Compact Request Provider button should be visible in header
+    const requestProviderLinks = document.querySelectorAll('a[href="https://models.litellm.ai/?request=true"]');
+    // There should be a compact button when banner is hidden
+    expect(requestProviderLinks.length).toBeGreaterThan(0);
+  });
 
   it("should show Missing provider banner by default", async () => {
     localStorageMock.clear();
@@ -228,14 +278,7 @@ describe("ModelsAndEndpointsView", () => {
     const queryClient = createQueryClient();
     const { getByRole } = render(
       <QueryClientProvider client={queryClient}>
-        <ModelsAndEndpointsView
-          token="123"
-          modelData={{ data: modelDataWithIds.data }}
-          keys={[]}
-          setModelData={() => {}}
-          premiumUser={false}
-          teams={[]}
-        />
+        <ModelsAndEndpointsView premiumUser={false} teams={[]} />
       </QueryClientProvider>,
     );
 
