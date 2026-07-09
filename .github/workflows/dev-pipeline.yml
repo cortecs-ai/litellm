@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install --with dev,proxy-dev
+          poetry install --with dev,proxy-dev --extras "proxy google"
 
       - name: Run pytest for cortecs
         run: poetry run pytest litellm/cortecs/
