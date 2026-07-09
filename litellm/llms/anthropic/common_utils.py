@@ -948,10 +948,13 @@ def strip_empty_text_blocks_from_anthropic_messages(
 
 
 def _is_empty_text_block(block: Any) -> bool:
-    if not isinstance(block, dict) or block.get("type") != "text":
+    if not isinstance(block, dict) or block.get("type") not in ("text", "thinking"):
         return False
-    text = block.get("text")
-    return not isinstance(text, str) or not text.strip()
+
+    content_key = "thinking" if block.get("type") == "thinking" else "text"
+    content = block.get(content_key)
+
+    return not isinstance(content, str) or not content.strip()
 
 
 def normalize_anthropic_tool_use_id(raw_id: str) -> str:
