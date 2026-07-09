@@ -63,7 +63,7 @@ proxy = [
     "azure-storage-blob>=12.28.0,<13.0",
     "mcp>=1.26.0,<2.0",
     "litellm-proxy-extras==0.4.74",
-    "litellm-enterprise==0.1.44",
+#    "litellm-enterprise==0.1.44",
     "RestrictedPython>=8.1,<9.0",
     "rich>=13.9.4,<14.0",
     "polars>=1.38.1,<2.0",
@@ -73,7 +73,7 @@ proxy = [
     "expression>=5.6.0,<6.0",
     "pymongo>=4.11.3,<4.12",
     "asyncpg>=0.30.0,<0.31",
-    "cachetools>=5.0.0,<7"
+    "cachetools>=5.0.0,<8"
 ]
 # Thin client install for the `lite` CLI on developer laptops. The CLI's heavy
 # imports (fastapi, cryptography, ...) are all guarded, so it runs on the base
@@ -251,15 +251,15 @@ exclude-newer = "3 days"
 
 [tool.uv.sources]
 litellm-proxy-extras = { workspace = true }
-litellm-enterprise = { workspace = true }
+#litellm-enterprise = { workspace = true }
 
 [tool.uv.workspace]
-members = ["enterprise", "litellm-proxy-extras"]
+members = ["litellm-proxy-extras"]
 
 [tool.uv.build-backend]
 module-root = ""
 source-exclude = [
-    "litellm/proxy/enterprise",
+#    "litellm/proxy/enterprise",
     "**/__pycache__",
     "**/__pycache__/**",
     "**/.pytest_cache",
