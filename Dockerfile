@@ -121,6 +121,7 @@ COPY --from=builder /app/litellm/proxy/prisma_migration.py /app/litellm/proxy/pr
 # on the runtime sys.path).
 COPY --from=builder /root/.cache/prisma /root/.cache/prisma
 COPY --from=builder /root/.cache/prisma-python /root/.cache/prisma-python
+COPY --from=builder /app/litellm/cortecs /app//litellm/cortecs
 
 RUN find /app/.venv -type f -path "*/tornado/test/*" -delete && \
     find /app/.venv -type d -path "*/tornado/test" -delete
