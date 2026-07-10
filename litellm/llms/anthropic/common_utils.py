@@ -951,10 +951,13 @@ def _is_empty_text_block(block: Any) -> bool:
     if not isinstance(block, dict) or block.get("type") not in ("text", "thinking"):
         return False
 
-    content_key = "thinking" if block.get("type") == "thinking" else "text"
-    content = block.get(content_key)
-
-    return not isinstance(content, str) or not content.strip()
+    if block.get("type") == "thinking":
+        content = block.get("thinking")
+        signature = block.get("signature")
+        return not isinstance(content, str) or not content.strip() or not isinstance(signature, str) or not signature.strip()
+    else:
+        content = block.get("text")
+        return not isinstance(content, str) or not content.strip()
 
 
 def normalize_anthropic_tool_use_id(raw_id: str) -> str:

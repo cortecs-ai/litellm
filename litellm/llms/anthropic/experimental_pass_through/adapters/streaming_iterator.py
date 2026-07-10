@@ -483,12 +483,15 @@ class AnthropicStreamWrapper(AdapterCompletionStreamWrapper):
                     self.chunk_queue.append(self.holding_chunk)
                     if processed_chunk.get("type") == "message_delta":
                         processed_chunk = self._augment_message_delta_usage(processed_chunk)
-                    self.chunk_queue.append(processed_chunk)
+                    if self._should_emit_processed_chunk(processed_chunk):
+                        self.chunk_queue.append(processed_chunk)
                     self.holding_chunk = None
                     return self.chunk_queue.popleft()
                 else:
                     if processed_chunk.get("type") == "message_delta":
                         processed_chunk = self._augment_message_delta_usage(processed_chunk)
+                    if not self._should_emit_processed_chunk(processed_chunk):
+                        continue
                     self.chunk_queue.append(processed_chunk)
                     return self.chunk_queue.popleft()
 
@@ -697,12 +700,15 @@ class AnthropicStreamWrapper(AdapterCompletionStreamWrapper):
                         self.chunk_queue.append(self.holding_chunk)
                         if processed_chunk.get("type") == "message_delta":
                             processed_chunk = self._augment_message_delta_usage(processed_chunk)
-                        self.chunk_queue.append(processed_chunk)
+                        if self._should_emit_processed_chunk(processed_chunk):
+                            self.chunk_queue.append(processed_chunk)
                         self.holding_chunk = None
                         return self.chunk_queue.popleft()
                     else:
                         if processed_chunk.get("type") == "message_delta":
                             processed_chunk = self._augment_message_delta_usage(processed_chunk)
+                        if not self._should_emit_processed_chunk(processed_chunk):
+                            continue
                         self.chunk_queue.append(processed_chunk)
                         return self.chunk_queue.popleft()
 
@@ -838,6 +844,12 @@ class AnthropicStreamWrapper(AdapterCompletionStreamWrapper):
         if delta_type == "signature_delta":
             return bool(delta.get("signature"))
         return False
+
+    @staticmethod
+    def _should_emit_processed_chunk(processed_chunk: Dict[str, Any]) -> bool:
+        if processed_chunk.get("type") != "content_block_delta":
+            return True
+        return AnthropicStreamWrapper._trigger_delta_has_content(processed_chunk)
 
     def _should_start_new_content_block(self, chunk: "ModelResponseStream") -> bool:
         """
