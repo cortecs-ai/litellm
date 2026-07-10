@@ -950,8 +950,10 @@ def strip_empty_text_blocks_from_anthropic_messages(
 def _is_empty_text_block(block: Any) -> bool:
     if not isinstance(block, dict) or block.get("type") not in ("text", "thinking"):
         return False
+
     content_key = "thinking" if block.get("type") == "thinking" else "text"
     content = block.get(content_key)
+
     return not isinstance(content, str) or not content.strip()
 
 
