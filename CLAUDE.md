@@ -73,6 +73,12 @@ Follow these coding conventions for new/updated code (a three-line fix in a lega
 
 Follow conventional commits for commit names and PR titles
 
+## Customization Boundary
+
+Before changing LiteLLM core functionality, determine whether the fix makes architectural sense in the [`litellm/cortecs/`](litellm/cortecs/) submodule. This submodule contains custom routing logic, business logic, authentication, callbacks, and deployment configuration files
+
+Prefer implementing the fix in `litellm/cortecs/` when it is specific to these customizations and can be cleanly contained there. Change LiteLLM core functionality only when the problem cannot reasonably be fixed in the submodule or the behavior belongs in LiteLLM itself
+
 ## Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs**
