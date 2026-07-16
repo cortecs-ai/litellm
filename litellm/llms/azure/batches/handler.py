@@ -52,15 +52,15 @@ class AzureBatchesAPI(BaseAzureLLM):
         ] = None,
         litellm_params: Optional[dict] = None,
     ) -> Union[LiteLLMBatch, Coroutine[Any, Any, LiteLLMBatch]]:
-        azure_client: Optional[
-            Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]
-        ] = self.get_azure_openai_client(
-            api_key=api_key,
-            api_base=api_base,
-            api_version=api_version,
-            client=client,
-            _is_async=_is_async,
-            litellm_params=litellm_params or {},
+        azure_client: Optional[Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]] = (
+            self.get_azure_openai_client(
+                api_key=api_key,
+                api_base=api_base,
+                api_version=api_version,
+                client=client,
+                _is_async=_is_async,
+                litellm_params=litellm_params or {},
+            )
         )
         if azure_client is None:
             raise ValueError(
@@ -100,15 +100,15 @@ class AzureBatchesAPI(BaseAzureLLM):
         ] = None,
         litellm_params: Optional[dict] = None,
     ):
-        azure_client: Optional[
-            Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]
-        ] = self.get_azure_openai_client(
-            api_key=api_key,
-            api_base=api_base,
-            api_version=api_version,
-            client=client,
-            _is_async=_is_async,
-            litellm_params=litellm_params or {},
+        azure_client: Optional[Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]] = (
+            self.get_azure_openai_client(
+                api_key=api_key,
+                api_base=api_base,
+                api_version=api_version,
+                client=client,
+                _is_async=_is_async,
+                litellm_params=litellm_params or {},
+            )
         )
         if azure_client is None:
             raise ValueError(
@@ -123,9 +123,7 @@ class AzureBatchesAPI(BaseAzureLLM):
             return self.aretrieve_batch(  # type: ignore
                 retrieve_batch_data=retrieve_batch_data, client=azure_client
             )
-        response = cast(Union[AzureOpenAI, OpenAI], azure_client).batches.retrieve(
-            **retrieve_batch_data
-        )
+        response = cast(Union[AzureOpenAI, OpenAI], azure_client).batches.retrieve(**retrieve_batch_data)
         return LiteLLMBatch(**response.model_dump())
 
     async def acancel_batch(
@@ -150,15 +148,15 @@ class AzureBatchesAPI(BaseAzureLLM):
         ] = None,
         litellm_params: Optional[dict] = None,
     ):
-        azure_client: Optional[
-            Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]
-        ] = self.get_azure_openai_client(
-            api_key=api_key,
-            api_base=api_base,
-            api_version=api_version,
-            client=client,
-            _is_async=_is_async,
-            litellm_params=litellm_params or {},
+        azure_client: Optional[Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]] = (
+            self.get_azure_openai_client(
+                api_key=api_key,
+                api_base=api_base,
+                api_version=api_version,
+                client=client,
+                _is_async=_is_async,
+                litellm_params=litellm_params or {},
+            )
         )
         if azure_client is None:
             raise ValueError(
@@ -206,15 +204,15 @@ class AzureBatchesAPI(BaseAzureLLM):
         ] = None,
         litellm_params: Optional[dict] = None,
     ):
-        azure_client: Optional[
-            Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]
-        ] = self.get_azure_openai_client(
-            api_key=api_key,
-            api_base=api_base,
-            api_version=api_version,
-            client=client,
-            _is_async=_is_async,
-            litellm_params=litellm_params or {},
+        azure_client: Optional[Union[AzureOpenAI, AsyncAzureOpenAI, OpenAI, AsyncOpenAI]] = (
+            self.get_azure_openai_client(
+                api_key=api_key,
+                api_base=api_base,
+                api_version=api_version,
+                client=client,
+                _is_async=_is_async,
+                litellm_params=litellm_params or {},
+            )
         )
         if azure_client is None:
             raise ValueError(

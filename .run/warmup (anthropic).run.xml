@@ -16,7 +16,7 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="RUN_TOOL" value="" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/litellm/cortecs/llm_router/warmup/__main__.py" />
-    <option name="PARAMETERS" value="--prompt-number 1 --use-anthropic --disable-normalization --disable-throughput-measurement" />
+    <option name="PARAMETERS" value="--prompt-number 1 --use-anthropic --disable-normalization" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

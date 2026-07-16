@@ -235,9 +235,7 @@ class DataSourceInlineConfig(TypedDict, total=False):
     """List of inline samples to use for the run"""
 
 
-RunDataSourceConfig = Union[
-    DataSourceDatasetConfig, DataSourceSampleSetConfig, DataSourceInlineConfig
-]
+RunDataSourceConfig = Union[DataSourceDatasetConfig, DataSourceSampleSetConfig, DataSourceInlineConfig]
 
 
 class CompletionConfig(TypedDict, total=False):
