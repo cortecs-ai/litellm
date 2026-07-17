@@ -706,6 +706,8 @@ def cleanup_router_config_variables():
 async def proxy_shutdown_event():
     global prisma_client, master_key, user_custom_auth, user_custom_key_generate, user_custom_key_update
     verbose_proxy_logger.info("Shutting down LiteLLM Proxy Server")
+    await _shutdown_custom_loggers()
+
     if prisma_client:
         verbose_proxy_logger.debug("Disconnecting from Prisma")
         await prisma_client.disconnect()
@@ -732,6 +734,27 @@ async def proxy_shutdown_event():
 
     ## RESET CUSTOM VARIABLES ##
     cleanup_router_config_variables()
+
+
+async def _shutdown_custom_loggers() -> None:
+    callbacks = tuple(
+        {
+            id(callback): callback
+            for callback in litellm.logging_callback_manager._get_all_callbacks()
+            if isinstance(callback, CustomLogger)
+        }.values()
+    )
+    results = await asyncio.gather(
+        *(callback.async_shutdown_hook() for callback in callbacks),
+        return_exceptions=True,
+    )
+    for callback, result in zip(callbacks, results):
+        if isinstance(result, BaseException):
+            verbose_proxy_logger.error(
+                "Custom logger %s failed during shutdown",
+                callback.__class__.__name__,
+                exc_info=(type(result), result, result.__traceback__),
+            )
 
 
 async def _initialize_shared_aiohttp_session():
