@@ -618,6 +618,9 @@ async def route_request(
     if "_cortecs_router_instance" not in globals():
         _cortecs_router_instance = CortecsLLMRouter(config=LLMRouterConfig())
 
+    # Inject LiteLLM router reference so BYOK calls can bypass the router
+    data["_litellm_router"] = llm_router
+
     if route_type in ["aembedding"]:
         return _cortecs_router_instance.embedding_handler.handle_request(data, llm_call)
     elif route_type in ["atranscription"]:
