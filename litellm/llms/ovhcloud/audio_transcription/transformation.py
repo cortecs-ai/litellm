@@ -5,6 +5,7 @@ Our unified API follows the OpenAI standard.
 More information on our website: https://endpoints.ai.cloud.ovh.net
 """
 
+import math
 from typing import List, Optional, Union
 
 import httpx
@@ -20,7 +21,11 @@ from litellm.types.llms.openai import (
     AllMessageValues,
     OpenAIAudioTranscriptionOptionalParams,
 )
-from litellm.types.utils import FileTypes, TranscriptionResponse
+from litellm.types.utils import (
+    FileTypes,
+    TranscriptionResponse,
+    TranscriptionUsageDurationObject,
+)
 
 from ..utils import OVHCloudException
 
@@ -165,6 +170,26 @@ class OVHCloudAudioTranscriptionConfig(BaseAudioTranscriptionConfig):
         )
         if duration is not None:
             response_json["duration"] = duration
+
+        usage = response_json.get("usage")
+        usage_seconds = usage.get("seconds") if isinstance(usage, dict) else None
+        normalized_seconds = (
+            usage_seconds
+            if isinstance(usage_seconds, (int, float))
+            and not isinstance(usage_seconds, bool)
+            and math.isfinite(usage_seconds)
+            and usage_seconds >= 0
+            else duration
+        )
+        if (
+            isinstance(normalized_seconds, (int, float))
+            and not isinstance(normalized_seconds, bool)
+            and math.isfinite(normalized_seconds)
+            and normalized_seconds >= 0
+        ):
+            response.usage = TranscriptionUsageDurationObject(
+                type="duration", seconds=float(normalized_seconds)
+            )
 
         response._hidden_params = response_json
         return response
