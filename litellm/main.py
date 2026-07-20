@@ -7725,6 +7725,9 @@ def speech(
         optional_params["speed"] = speed  # type: ignore
     if instructions is not None:
         optional_params["instructions"] = instructions
+    extra_body = kwargs.get("extra_body")
+    if extra_body is not None:
+        optional_params["extra_body"] = extra_body
 
     if timeout is None:
         timeout = litellm.request_timeout
