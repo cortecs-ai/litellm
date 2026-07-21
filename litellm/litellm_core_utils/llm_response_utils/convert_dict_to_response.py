@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import re
 import time
 import traceback
@@ -831,12 +832,39 @@ def convert_to_model_response_object(
                     None
                 )
 
-                if response_object["usage"].get("type", None) == "duration":
-                    tr_usage_object = TranscriptionUsageDurationObject(**response_object["usage"])
-                elif response_object["usage"].get("type", None) == "tokens":
-                    tr_usage_object = TranscriptionUsageTokensObject(**response_object["usage"])
+                transcription_usage = response_object["usage"]
+                if transcription_usage.get("type", None) == "duration":
+                    tr_usage_object = TranscriptionUsageDurationObject(**transcription_usage)
+                elif transcription_usage.get("type", None) == "tokens":
+                    tr_usage_object = TranscriptionUsageTokensObject(**transcription_usage)
+                elif (
+                    isinstance(
+                        transcription_usage.get("prompt_audio_seconds"), (int, float)
+                    )
+                    and not isinstance(
+                        transcription_usage.get("prompt_audio_seconds"), bool
+                    )
+                    and math.isfinite(transcription_usage["prompt_audio_seconds"])
+                    and transcription_usage["prompt_audio_seconds"] >= 0
+                ):
+                    tr_usage_object = TranscriptionUsageDurationObject(
+                        type="duration",
+                        seconds=float(transcription_usage["prompt_audio_seconds"]),
+                    )
                 if tr_usage_object is not None:
                     setattr(model_response_object, "usage", tr_usage_object)
+
+            response_duration = response_object.get("duration")
+            if (
+                model_response_object.usage is None
+                and isinstance(response_duration, (int, float))
+                and not isinstance(response_duration, bool)
+                and math.isfinite(response_duration)
+                and response_duration >= 0
+            ):
+                model_response_object.usage = TranscriptionUsageDurationObject(
+                    type="duration", seconds=float(response_duration)
+                )
 
             if hidden_params is not None:
                 model_response_object._hidden_params = hidden_params
