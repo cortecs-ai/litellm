@@ -642,9 +642,13 @@ def _resolve_model_provider_for_responses(
     custom_llm_provider: Optional[str],
     litellm_params: GenericLiteLLMParams,
     local_vars: Dict[str, Any],
+    defer_to_chat_completions: bool = False,
 ) -> tuple[str, Optional[str]]:
     if custom_llm_provider is not None and not litellm_params.custom_llm_provider:
         litellm_params.custom_llm_provider = custom_llm_provider
+    if defer_to_chat_completions and custom_llm_provider is not None:
+        local_vars["custom_llm_provider"] = custom_llm_provider
+        return model, custom_llm_provider
     (
         model,
         custom_llm_provider,
@@ -931,6 +935,7 @@ def responses(
             custom_llm_provider=custom_llm_provider,
             litellm_params=litellm_params,
             local_vars=local_vars,
+            defer_to_chat_completions=use_chat_completions_api,
         )
 
         #########################################################
