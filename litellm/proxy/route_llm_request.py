@@ -623,6 +623,10 @@ async def route_request(
 
     if route_type in ["aembedding"]:
         return _cortecs_router_instance.embedding_handler.handle_request(data, llm_call)
+    elif route_type in ["aresponses"]:
+        return await _cortecs_router_instance.responses_handler.handle_request(
+            data, llm_call
+        )
     elif route_type in ["atranscription"]:
         return _cortecs_router_instance.transcription_handler.handle_request(
             data, llm_call
