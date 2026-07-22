@@ -1974,6 +1974,9 @@ class LiteLLMCompletionResponsesConfig:
             else:
                 input_details_dict["cached_tokens"] = 0
 
+            if hasattr(prompt_details, "cache_creation_tokens") and prompt_details.cache_creation_tokens is not None:
+                input_details_dict["cache_creation_tokens"] = prompt_details.cache_creation_tokens
+
             if hasattr(prompt_details, "text_tokens") and prompt_details.text_tokens is not None:
                 input_details_dict["text_tokens"] = prompt_details.text_tokens
 
