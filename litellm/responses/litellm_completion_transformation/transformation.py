@@ -207,7 +207,7 @@ class LiteLLMCompletionResponsesConfig:
             "tool_choice": LiteLLMCompletionResponsesConfig._transform_tool_choice(
                 responses_api_request.get("tool_choice")
             ),
-            "tools": tools,
+            "tools": tools or None,
             "top_p": responses_api_request.get("top_p"),
             "user": responses_api_request.get("user"),
             "temperature": responses_api_request.get("temperature"),
@@ -1973,6 +1973,9 @@ class LiteLLMCompletionResponsesConfig:
                 input_details_dict["cached_tokens"] = prompt_details.cached_tokens
             else:
                 input_details_dict["cached_tokens"] = 0
+
+            if hasattr(prompt_details, "cache_creation_tokens") and prompt_details.cache_creation_tokens is not None:
+                input_details_dict["cache_creation_tokens"] = prompt_details.cache_creation_tokens
 
             if hasattr(prompt_details, "text_tokens") and prompt_details.text_tokens is not None:
                 input_details_dict["text_tokens"] = prompt_details.text_tokens

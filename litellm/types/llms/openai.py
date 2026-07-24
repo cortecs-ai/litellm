@@ -1193,6 +1193,7 @@ class OutputTokensDetails(BaseLiteLLMOpenAIResponseObject):
 class InputTokensDetails(BaseLiteLLMOpenAIResponseObject):
     audio_tokens: Optional[int] = None
     cached_tokens: int = 0
+    cache_creation_tokens: Optional[int] = None
     text_tokens: Optional[int] = None
 
     model_config = {"extra": "allow"}
