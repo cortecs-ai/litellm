@@ -540,6 +540,53 @@ class TestAgentRBACProxyAdmin:
             assert resp.status_code == 200
 
 
+class TestAgentProtocolVersionValidation:
+    """Registration accepts spec-default semver protocolVersion values and still
+    rejects genuinely unsupported versions."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, monkeypatch):
+        self.admin_client = _make_app_with_role(LitellmUserRoles.PROXY_ADMIN)
+        self.mock_registry = MagicMock()
+        monkeypatch.setattr(agent_endpoints, "AGENT_REGISTRY", self.mock_registry)
+
+    def _create_agent_with_protocol_version(self, protocol_version: str):
+        config = _sample_agent_config()
+        config["agent_card_params"]["protocolVersion"] = protocol_version
+        with patch("litellm.proxy.proxy_server.prisma_client"):
+            self.mock_registry.get_agent_by_name = MagicMock(return_value=None)
+            self.mock_registry.add_agent_to_db = AsyncMock(
+                return_value=_sample_agent_response()
+            )
+            self.mock_registry.register_agent = MagicMock()
+            return self.admin_client.post(
+                "/v1/agents",
+                json=config,
+                headers={"Authorization": "Bearer k"},
+            )
+
+    def test_semver_protocol_version_registers_and_stores_major_minor(self):
+        resp = self._create_agent_with_protocol_version("0.3.0")
+        assert resp.status_code == 200
+        stored_card = self.mock_registry.add_agent_to_db.await_args.kwargs["agent"][
+            "agent_card_params"
+        ]
+        assert stored_card["protocolVersion"] == "0.3"
+        assert stored_card["supportedInterfaces"][0]["protocolVersion"] == "0.3"
+
+    def test_unsupported_protocol_version_is_rejected(self):
+        resp = self._create_agent_with_protocol_version("0.2.6")
+        assert resp.status_code == 400
+        assert "Unsupported protocolVersion '0.2.6'" in resp.json()["detail"]
+        self.mock_registry.add_agent_to_db.assert_not_awaited()
+
+    def test_malformed_protocol_version_is_rejected(self):
+        resp = self._create_agent_with_protocol_version("0.3.garbage")
+        assert resp.status_code == 400
+        assert "Unsupported protocolVersion '0.3.garbage'" in resp.json()["detail"]
+        self.mock_registry.add_agent_to_db.assert_not_awaited()
+
+
 class TestCheckAgentManagementPermission:
     """Unit tests for the _check_agent_management_permission helper."""
 
@@ -786,3 +833,32 @@ class TestCheckAgentUrlHealth:
         )
         result = await _check_agent_url_health(agent)
         assert result["healthy"] is True
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["http://0.0.0.0:4000/", "http://localhost:4000/", "https://api.example.com/"],
+)
+def test_merged_agent_card_url_has_no_double_slash_without_proxy_base_url(
+    monkeypatch, base_url
+):
+    """Without PROXY_BASE_URL, request.base_url carries a trailing slash; the merged
+    card's supportedInterfaces URL must still join cleanly (no `//a2a`)."""
+    from litellm.proxy.agent_endpoints.endpoints import _build_merged_agent_card
+
+    monkeypatch.delenv("PROXY_BASE_URL", raising=False)
+    monkeypatch.delenv("SERVER_ROOT_PATH", raising=False)
+
+    http_request = MagicMock()
+    http_request.base_url = base_url
+
+    merged = _build_merged_agent_card(
+        _sample_agent_card_params(),
+        agent_id="agent-xyz",
+        http_request=http_request,
+        agent_name="Test Agent",
+    )
+
+    interface_url = merged["supportedInterfaces"][0]["url"]
+    assert interface_url == f"{base_url.rstrip('/')}/a2a/agent-xyz"
+    assert "//a2a" not in interface_url
