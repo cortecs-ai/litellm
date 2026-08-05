@@ -1715,8 +1715,27 @@ async def clear_cache():
         for model_id in db_model_ids:
             llm_router.delete_deployment(id=model_id)
 
-        # Clear auto routers
-        llm_router.auto_routers.clear()
+        # Clear only DB-backed auto-router-family entries, keyed by model_name, so the
+        # reload below rebuilds them fresh. A blanket .clear() would also drop config-defined
+        # routers, which are never re-added below (add_deployment only reloads DB models),
+        # leaving them permanently unroutable until a full proxy restart for every tenant.
+        # Restrict to deployments whose model is actually an auto_router/* so a config
+        # router that merely shares a model_name with a regular DB model isn't evicted. The
+        # auto_router/ prefix also covers quality_router/ and adaptive_router/, so pop the
+        # name from every router registry (no-op where absent); missing quality/adaptive
+        # entries would otherwise make init raise "already exists" on reload and abort it.
+        db_router_names = {
+            model.get("model_name")
+            for model in current_models
+            if model.get("model_name") is not None
+            and model.get("model_info", {}).get("db_model", False)
+            and str(model.get("litellm_params", {}).get("model", "")).startswith("auto_router/")
+        }
+        for model_name in db_router_names:
+            llm_router.auto_routers.pop(model_name, None)
+            llm_router.complexity_routers.pop(model_name, None)
+            llm_router.adaptive_routers.pop(model_name, None)
+            llm_router.quality_routers.pop(model_name, None)
 
         # Reload only DB models
         await proxy_config.add_deployment(prisma_client=prisma_client, proxy_logging_obj=proxy_logging_obj)
