@@ -22,15 +22,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.12"
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          poetry install --with dev,proxy-dev --extras "proxy google"
+          uv sync --frozen --group dev --group proxy-dev --extra proxy --extra google
 
       - name: Run pytest for cortecs
-        run: poetry run pytest litellm/cortecs/
+        run: uv run --frozen pytest litellm/cortecs/
 
   build_and_push:
     runs-on: ubuntu-latest
