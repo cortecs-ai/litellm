@@ -70,7 +70,7 @@ ROUTE_ENDPOINT_MAPPING = {
     "acompletion": "/chat/completions",
     "atext_completion": "/completions",
     "aembedding": "/embeddings",
-    "aimage_generation": "/image/generations",
+    "aimage_generation": "/images/generations",
     "aspeech": "/audio/speech",
     "atranscription": "/audio/transcriptions",
     "amoderation": "/moderations",
@@ -662,6 +662,10 @@ async def route_request(
 
     if route_type in ["aembedding"]:
         return _cortecs_router_instance.embedding_handler.handle_request(data, llm_call)
+    elif route_type in ["aimage_generation"]:
+        return _cortecs_router_instance.image_generation_handler.handle_request(
+            data, llm_call
+        )
     elif route_type in ["aresponses"]:
         return _cortecs_router_instance.responses_handler.handle_request(data, llm_call)
     elif route_type in ["atranscription"]:
