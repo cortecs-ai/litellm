@@ -8661,6 +8661,12 @@ class ProviderConfigManager:
             )
 
             return get_modelscope_image_generation_config(model)
+        elif LlmProviders.OVHCLOUD == provider:
+            from litellm.llms.ovhcloud.image_generation import (
+                OVHCloudImageGenerationConfig,
+            )
+
+            return OVHCloudImageGenerationConfig()
         return None
 
     @staticmethod
