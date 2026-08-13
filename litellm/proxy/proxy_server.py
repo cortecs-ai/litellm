@@ -8693,15 +8693,16 @@ async def model_list(
         filter_data = await config_service.apply_to_request(filter_data, project_id)
 
     service = ModelService()
-    return await asyncio.to_thread(
-        service.get_models_for_openai,
-        currency or "EUR",
-        tag,
-        filter_data.get("allowed_providers"),
-        filter_data.get("eu_native", False),
-        filter_data.get("allow_quantization", True),
-        filter_data.get("allow_zero_data_retention", False),
-        extended,
+    return await service.get_models_for_openai(
+        currency=currency or "EUR",
+        tags=tag,
+        allowed_providers=filter_data.get("allowed_providers"),
+        eu_native=filter_data.get("eu_native", False),
+        allow_quantization=filter_data.get("allow_quantization", True),
+        allow_zero_data_retention=filter_data.get(
+            "allow_zero_data_retention", False
+        ),
+        extended=extended,
     )
 
 
@@ -8763,16 +8764,17 @@ async def model_info(
         filter_data = await config_service.apply_to_request(filter_data, project_id)
 
     service = ModelService()
-    return await asyncio.to_thread(
-        service.get_model_info,
-        model_id,
-        currency or "EUR",
-        tag,
-        filter_data.get("allowed_providers"),
-        filter_data.get("eu_native", False),
-        filter_data.get("allow_quantization", True),
-        filter_data.get("allow_zero_data_retention", False),
-        True,
+    return await service.get_model_info(
+        model_id=model_id,
+        currency=currency or "EUR",
+        tags=tag,
+        allowed_providers=filter_data.get("allowed_providers"),
+        eu_native=filter_data.get("eu_native", False),
+        allow_quantization=filter_data.get("allow_quantization", True),
+        allow_zero_data_retention=filter_data.get(
+            "allow_zero_data_retention", False
+        ),
+        extended=True,
     )
 
 
