@@ -88,6 +88,7 @@ from litellm.types.llms.anthropic import (
     AllAnthropicToolsValues,
     AnthopicMessagesAssistantMessageParam,
     AnthropicFinishReason,
+    AnthropicMessagesDocumentParam,
     AnthropicMessagesRequest,
     AnthropicMessagesToolChoice,
     AnthropicMessagesUserMessageParam,
@@ -116,6 +117,7 @@ from litellm.types.llms.openai import (
     AllMessageValues,
     ChatCompletionAssistantMessage,
     ChatCompletionAssistantToolCall,
+    ChatCompletionFileObject,
     ChatCompletionImageObject,
     ChatCompletionImageUrlObject,
     ChatCompletionRedactedThinkingBlock,
@@ -365,7 +367,9 @@ class LiteLLMAnthropicMessagesAdapter:
         for m in messages:
             user_message: Optional[ChatCompletionUserMessage] = None
             tool_message_list: List[ChatCompletionToolMessage] = []
-            new_user_content_list: List[Union[ChatCompletionTextObject, ChatCompletionImageObject]] = []
+            new_user_content_list: List[
+                Union[ChatCompletionTextObject, ChatCompletionImageObject, ChatCompletionFileObject]
+            ] = []
             ## USER MESSAGE ##
             if m["role"] == "user":
                 ## translate user message
@@ -389,15 +393,12 @@ class LiteLLMAnthropicMessagesAdapter:
                                 self._add_cache_control_if_applicable(content, image_obj, model)
                                 new_user_content_list.append(image_obj)  # type: ignore
                         elif content.get("type") == "document":
-                            # Convert Anthropic document format (PDF, etc.) to OpenAI format
-                            source = content.get("source", {})
-                            openai_image_url = self._translate_anthropic_image_to_openai(cast(dict, source))
-
-                            if openai_image_url:
-                                image_url_obj = ChatCompletionImageUrlObject(url=openai_image_url)
-                                doc_obj = ChatCompletionImageObject(type="image_url", image_url=image_url_obj)
+                            doc_obj = self._translate_anthropic_document_to_openai(
+                                cast(AnthropicMessagesDocumentParam, content)
+                            )
+                            if doc_obj:
                                 self._add_cache_control_if_applicable(content, doc_obj, model)
-                                new_user_content_list.append(doc_obj)  # type: ignore
+                                new_user_content_list.append(doc_obj)
                         elif content.get("type") == "tool_result":
                             if "content" not in content:
                                 tool_result = ChatCompletionToolMessage(
@@ -1135,6 +1136,37 @@ class LiteLLMAnthropicMessagesAdapter:
             # URL-referenced image format
             return image_source.get("url", "")
 
+        return None
+
+    def _translate_anthropic_document_to_openai(
+        self, document: AnthropicMessagesDocumentParam
+    ) -> Optional[ChatCompletionFileObject]:
+        source = document["source"]
+        if source["type"] == "base64":
+            media_type = source["media_type"]
+            data = source["data"]
+            if not data:
+                return None
+            extension = "txt" if media_type == "text/plain" else "pdf"
+            base_filename = document["title"] if "title" in document and document["title"] else "document"
+            filename = (
+                base_filename if base_filename.lower().endswith(f".{extension}") else f"{base_filename}.{extension}"
+            )
+            return {
+                "type": "file",
+                "file": {
+                    "file_data": f"data:{media_type};base64,{data}",
+                    "filename": filename,
+                },
+            }
+        if source["type"] == "file":
+            file_id = source["file_id"]
+            if file_id:
+                return {"type": "file", "file": {"file_id": file_id}}
+        if source["type"] == "url":
+            url = source["url"]
+            if url:
+                return {"type": "file", "file": {"file_id": url}}
         return None
 
     def _translate_openai_content_to_anthropic(
