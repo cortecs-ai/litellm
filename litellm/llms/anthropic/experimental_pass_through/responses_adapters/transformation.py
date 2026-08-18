@@ -18,6 +18,7 @@ from litellm.types.llms.anthropic import (
     AllAnthropicToolsValues,
     AnthopicMessagesAssistantMessageParam,
     AnthropicFinishReason,
+    AnthropicMessagesDocumentParam,
     AnthropicMessagesRequest,
     AnthropicMessagesToolChoice,
     AnthropicMessagesUserMessageParam,
@@ -52,6 +53,36 @@ class LiteLLMAnthropicToResponsesAPIAdapter:
             return f"data:{media_type};base64,{data}" if data else None
         elif source_type == "url":
             return source.get("url")
+        return None
+
+    @staticmethod
+    def _translate_anthropic_document_to_input_file(
+        document: AnthropicMessagesDocumentParam,
+    ) -> Optional[Dict[str, str]]:
+        source = document["source"]
+        if source["type"] == "base64":
+            media_type = source["media_type"]
+            data = source["data"]
+            if not data:
+                return None
+            extension = "txt" if media_type == "text/plain" else "pdf"
+            base_filename = document["title"] if "title" in document and document["title"] else "document"
+            filename = (
+                base_filename if base_filename.lower().endswith(f".{extension}") else f"{base_filename}.{extension}"
+            )
+            return {
+                "type": "input_file",
+                "filename": filename,
+                "file_data": f"data:{media_type};base64,{data}",
+            }
+        if source["type"] == "file":
+            file_id = source["file_id"]
+            if file_id:
+                return {"type": "input_file", "file_id": file_id}
+        if source["type"] == "url":
+            url = source["url"]
+            if url:
+                return {"type": "input_file", "file_url": url}
         return None
 
     def translate_messages_to_responses_input(
@@ -100,6 +131,12 @@ class LiteLLMAnthropicToResponsesAPIAdapter:
                             url = self._translate_anthropic_image_source_to_url(cast(dict, block.get("source", {})))
                             if url:
                                 user_parts.append({"type": "input_image", "image_url": url})
+                        elif btype == "document":
+                            input_file = self._translate_anthropic_document_to_input_file(
+                                cast(AnthropicMessagesDocumentParam, block)
+                            )
+                            if input_file:
+                                user_parts.append(input_file)
                         elif btype == "tool_result":
                             tool_use_id = block.get("tool_use_id", "")
                             inner = block.get("content")
