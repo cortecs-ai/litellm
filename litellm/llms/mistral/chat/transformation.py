@@ -108,6 +108,7 @@ class MistralConfig(OpenAIGPTConfig):
             "stop",
             "response_format",
             "parallel_tool_calls",
+            "reasoning_effort",
         ]
 
         # Add reasoning support for magistral models and mistral-small
