@@ -8671,6 +8671,7 @@ async def model_list(
     from litellm.cortecs.backend.services.project_config_service import (
         ProjectConfigService,
     )
+    from litellm.cortecs.utils.constants import DEFAULT_TEAM_ID
 
     filter_data: dict = {}
     if allowed_providers is not None:
@@ -8683,14 +8684,14 @@ async def model_list(
         filter_data["allow_zero_data_retention"] = allow_zero_data_retention
 
     # Apply per-project inference config defaults when the caller is authenticated
-    project_id = (
-        getattr(user_api_key_dict, "project_id", None)
-        if user_api_key_dict is not None
-        else None
-    )
+    project_id = getattr(user_api_key_dict, "project_id", None) if user_api_key_dict is not None else None
     if project_id:
         config_service = ProjectConfigService()
-        filter_data = await config_service.apply_to_request(filter_data, project_id)
+        filter_data = await config_service.apply_to_request(
+            filter_data,
+            project_id,
+            team_id=user_api_key_dict.team_id or DEFAULT_TEAM_ID,
+        )
 
     service = ModelService()
     return await service.get_models_for_openai(
@@ -8699,9 +8700,7 @@ async def model_list(
         allowed_providers=filter_data.get("allowed_providers"),
         eu_native=filter_data.get("eu_native", False),
         allow_quantization=filter_data.get("allow_quantization", True),
-        allow_zero_data_retention=filter_data.get(
-            "allow_zero_data_retention", False
-        ),
+        allow_zero_data_retention=filter_data.get("allow_zero_data_retention", False),
         extended=extended,
     )
 
@@ -8724,7 +8723,7 @@ async def model_info(
     allowed_providers: Optional[List[str]] = Query(default=None),
     eu_native: Optional[bool] = None,
     allow_quantization: Optional[bool] = None,
-    allow_zero_data_retention: Optional[bool] = None
+    allow_zero_data_retention: Optional[bool] = None,
 ):
     """
     Retrieve information about a specific model accessible to your API key.
@@ -8743,6 +8742,7 @@ async def model_info(
     from litellm.cortecs.backend.services.project_config_service import (
         ProjectConfigService,
     )
+    from litellm.cortecs.utils.constants import DEFAULT_TEAM_ID
 
     filter_data: dict = {}
     if allowed_providers is not None:
@@ -8754,14 +8754,14 @@ async def model_info(
     if allow_zero_data_retention is not None:
         filter_data["allow_zero_data_retention"] = allow_zero_data_retention
 
-    project_id = (
-        getattr(user_api_key_dict, "project_id", None)
-        if user_api_key_dict is not None
-        else None
-    )
+    project_id = getattr(user_api_key_dict, "project_id", None) if user_api_key_dict is not None else None
     if project_id:
         config_service = ProjectConfigService()
-        filter_data = await config_service.apply_to_request(filter_data, project_id)
+        filter_data = await config_service.apply_to_request(
+            filter_data,
+            project_id,
+            team_id=user_api_key_dict.team_id or DEFAULT_TEAM_ID,
+        )
 
     service = ModelService()
     return await service.get_model_info(
@@ -8771,9 +8771,7 @@ async def model_info(
         allowed_providers=filter_data.get("allowed_providers"),
         eu_native=filter_data.get("eu_native", False),
         allow_quantization=filter_data.get("allow_quantization", True),
-        allow_zero_data_retention=filter_data.get(
-            "allow_zero_data_retention", False
-        ),
+        allow_zero_data_retention=filter_data.get("allow_zero_data_retention", False),
         extended=True,
     )
 
