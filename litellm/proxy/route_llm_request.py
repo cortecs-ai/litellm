@@ -672,6 +672,8 @@ async def route_request(
         return _cortecs_router_instance.transcription_handler.handle_request(data, llm_call)
     elif route_type in ["aspeech"]:
         return _cortecs_router_instance.speech_handler.handle_request(data, llm_call)
+    elif route_type == "aocr":
+        return _cortecs_router_instance.ocr_handler.handle_request(data, llm_call)
     else:
         return _cortecs_router_instance.completion_handler.handle_request(data, llm_call)
 
