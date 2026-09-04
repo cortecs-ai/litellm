@@ -221,6 +221,7 @@ from litellm import Router
 from litellm._logging import verbose_proxy_logger, verbose_router_logger
 from litellm.caching.caching import DualCache, RedisCache
 from litellm.caching.redis_cluster_cache import RedisClusterCache
+from litellm.cortecs.routers import dedicated_router
 from litellm.constants import (
     _REALTIME_BODY_CACHE_SIZE,
     APSCHEDULER_COALESCE,
@@ -16255,6 +16256,12 @@ app.include_router(enterprise_router)
 app.include_router(ui_discovery_endpoints_router)
 # Eager: /models/{name}:method overlaps with the OpenAI /models endpoint.
 app.include_router(google_router)
+
+## CORTECS
+app.include_router(
+    dedicated_router
+)
+##
 
 attach_lazy_features(app)
 app.add_middleware(
