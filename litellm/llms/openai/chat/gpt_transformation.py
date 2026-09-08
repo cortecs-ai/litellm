@@ -208,6 +208,11 @@ class OpenAIGPTConfig(BaseLLMModelInfo, BaseConfig):
         supported_openai_params = self.get_supported_openai_params(model)
         for param, value in non_default_params.items():
             if param in supported_openai_params:
+                if param == "reasoning_effort" and isinstance(value, dict):
+                    reasoning_effort = value.get("effort")
+                    if isinstance(reasoning_effort, str):
+                        optional_params[param] = reasoning_effort
+                    continue
                 optional_params[param] = value
         return optional_params
 

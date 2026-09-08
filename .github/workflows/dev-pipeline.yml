@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - "hotfix/**"
 
 jobs:
   test:
@@ -72,8 +73,13 @@ jobs:
 
       - name: Check for changes in backend
         id: backend_changes
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          if [ -z "${{ env.last_successful_commit }}" ] || ! git cat-file -e "${{ env.last_successful_commit }}^{commit}" >/dev/null 2>&1; then
+          if [[ "$BRANCH_NAME" == hotfix/* ]]; then
+            echo "Hotfix branch. Building the backend image."
+            backend_changed=true
+          elif [ -z "${{ env.last_successful_commit }}" ] || ! git cat-file -e "${{ env.last_successful_commit }}^{commit}" >/dev/null 2>&1; then
             echo "No last successful commit found or invalid commit. Defaulting backend_changed to true."
             backend_changed=true
           else
@@ -95,42 +101,47 @@ jobs:
           echo "backend_changed=$backend_changed" >> "$GITHUB_ENV"
 
       - name: Retrieve latest image versions
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-
-          BEARER=$(curl -s -X POST https://hub.docker.com/v2/users/login \
-            -H "Content-Type: application/json" \
-            -d '{"username": "'"${{ secrets.DOCKERHUB_USERNAME }}"'", "password": "'"${{ secrets.DOCKERHUB_TOKEN }}"'"}' | jq -r .token)
-
-
           # Extract and increment backend version if backend changed
           if [ "${{ env.backend_changed }}" == "true" ]; then
-            # Get Latest Backend Tag
-            LATEST_BACKEND_TAG=$(curl -s -X GET https://hub.docker.com/v2/namespaces/dockercortecs/repositories/web_app/tags?page_size=100 \
-              -H "Authorization: Bearer $BEARER" | jq -r '.results[] | select(.name | startswith("litellm")) | .name' | sort -V | tail -n 1)
-
-            if [ -z "$LATEST_BACKEND_TAG" ]; then
-              echo "No existing image tag found. Setting to default: 0.0.1"
-              LATEST_BACKEND_TAG="litellm-0.0.1"
-            fi
-
-            echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG" >> $GITHUB_ENV
-            echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG"
-            backend_version=$(echo "$LATEST_BACKEND_TAG" | grep -oP '(?<=litellm-)\d+\.\d+\.\d+')
-            IFS='.' read -r major minor patch <<< "$backend_version"
-
-            # Determine version bump type from commit message
-            commit_message="${{ github.event.head_commit.message }}"
-            echo "Commit message: $commit_message"
-
-            if echo "$commit_message" | grep -qiE '\[major\]'; then
-              echo "Detected MAJOR version bump"
-              new_backend_version="$((major + 1)).0.0"
-            elif echo "$commit_message" | grep -qiE '\[minor\]'; then
-              echo "Detected MINOR version bump"
-              new_backend_version="$major.$((minor + 1)).0"
+            if [[ "$BRANCH_NAME" == hotfix/* ]]; then
+              new_backend_version="hotfix-$(date -u +'%Y%m%d%H%M')"
             else
-              echo "Detected PATCH version bump (default)"
-              new_backend_version="$major.$minor.$((patch + 1))"
+              BEARER=$(curl -s -X POST https://hub.docker.com/v2/users/login \
+                -H "Content-Type: application/json" \
+                -d '{"username": "'"${{ secrets.DOCKERHUB_USERNAME }}"'", "password": "'"${{ secrets.DOCKERHUB_TOKEN }}"'"}' | jq -r .token)
+
+              # Get Latest Backend Tag
+              LATEST_BACKEND_TAG=$(curl -s -X GET https://hub.docker.com/v2/namespaces/dockercortecs/repositories/web_app/tags?page_size=100 \
+                -H "Authorization: Bearer $BEARER" | jq -r '.results[] | select(.name | test("^litellm-[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name' | sort -V | tail -n 1)
+
+              if [ -z "$LATEST_BACKEND_TAG" ]; then
+                echo "No existing image tag found. Setting to default: 0.0.1"
+                LATEST_BACKEND_TAG="litellm-0.0.1"
+              fi
+
+              echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG" >> $GITHUB_ENV
+              echo "LATEST_BACKEND_TAG=$LATEST_BACKEND_TAG"
+              backend_version=$(echo "$LATEST_BACKEND_TAG" | grep -oP '(?<=litellm-)\d+\.\d+\.\d+')
+              IFS='.' read -r major minor patch <<< "$backend_version"
+
+              # Determine version bump type from commit message
+              commit_message="$COMMIT_MESSAGE"
+              echo "Commit message: $commit_message"
+
+              if echo "$commit_message" | grep -qiE '\[major\]'; then
+                echo "Detected MAJOR version bump"
+                new_backend_version="$((major + 1)).0.0"
+              elif echo "$commit_message" | grep -qiE '\[minor\]'; then
+                echo "Detected MINOR version bump"
+                new_backend_version="$major.$((minor + 1)).0"
+              else
+                echo "Detected PATCH version bump (default)"
+                new_backend_version="$major.$minor.$((patch + 1))"
+              fi
             fi
 
             echo "NEW_BACKEND_VERSION=$new_backend_version" >> $GITHUB_ENV
@@ -161,6 +172,7 @@ jobs:
           retention-days: 1 # Retains artifact for 1 day
 
   deploy:
+    if: ${{ !startsWith(github.ref_name, 'hotfix/') }}
     runs-on: ubuntu-latest
     needs: build_and_push
     steps:
@@ -294,7 +306,8 @@ jobs:
             ${{ secrets.DISCORD_WEBHOOK_URL }}
 
   tag_commit:
-    needs: deploy
+    if: always() && needs.build_and_push.result == 'success' && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped')
+    needs: [build_and_push, deploy]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
