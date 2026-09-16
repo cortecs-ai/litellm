@@ -787,6 +787,9 @@ class LiteLLMCompletionStreamingIterator(ResponsesAPIStreamingIterator):
     async def __anext__(
         self,
     ) -> ResponsesAPIStreamingResponse | ResponseCompletedEvent | BaseLiteLLMOpenAIResponseObject:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         try:
             while True:
                 if self.finished is True:
@@ -889,6 +892,9 @@ class LiteLLMCompletionStreamingIterator(ResponsesAPIStreamingIterator):
     def __next__(
         self,
     ) -> ResponsesAPIStreamingResponse | ResponseCompletedEvent | BaseLiteLLMOpenAIResponseObject:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         try:
             while True:
                 if self.finished is True:
