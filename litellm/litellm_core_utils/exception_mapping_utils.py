@@ -974,7 +974,7 @@ def _map_sagemaker_exception(
 ) -> None:
     if "Unable to locate credentials" in error_str:
         raise BadRequestError(
-            message=f"litellm.BadRequestError: SagemakerException - {error_str}",
+            message=f"BadRequestError: SagemakerException - {error_str}",
             model=model,
             llm_provider="sagemaker",
             response=getattr(original_exception, "response", None),
@@ -1081,7 +1081,7 @@ def _map_vertex_exception(
 ) -> None:
     if "Vertex AI API has not been used in project" in error_str or "Unable to find your project" in error_str:
         raise BadRequestError(
-            message=f"litellm.BadRequestError: {custom_llm_provider}Exception - {error_str}",
+            message=f"BadRequestError: {custom_llm_provider}Exception - {error_str}",
             model=model,
             llm_provider=custom_llm_provider,
             response=httpx.Response(
@@ -1108,7 +1108,7 @@ def _map_vertex_exception(
         )
     elif "None Unknown Error." in error_str or "Content has no parts." in error_str:
         raise litellm.InternalServerError(
-            message=f"litellm.InternalServerError: {custom_llm_provider}Exception - {error_str}",
+            message=f"InternalServerError: {custom_llm_provider}Exception - {error_str}",
             model=model,
             llm_provider=custom_llm_provider,
             response=httpx.Response(
@@ -1164,7 +1164,7 @@ def _map_vertex_exception(
         or "429 Unable to submit request because the service is temporarily out of capacity." in error_str
     ):
         raise RateLimitError(
-            message=f"litellm.RateLimitError: {custom_llm_provider}Exception - {error_str}",
+            message=f"RateLimitError: {custom_llm_provider}Exception - {error_str}",
             model=model,
             llm_provider=custom_llm_provider,
             litellm_debug_info=extra_information,
@@ -1186,7 +1186,7 @@ def _map_vertex_exception(
         # Scoped to 5xx so HTTP 400/401 with body code:429
         # still maps to BadRequestError / AuthenticationError.
         raise RateLimitError(
-            message=f"litellm.RateLimitError: {custom_llm_provider}Exception - {error_str}",
+            message=f"RateLimitError: {custom_llm_provider}Exception - {error_str}",
             model=model,
             llm_provider=custom_llm_provider,
             litellm_debug_info=extra_information,
@@ -1200,7 +1200,7 @@ def _map_vertex_exception(
         )
     elif "500 Internal Server Error" in error_str or "The model is overloaded." in error_str:
         raise litellm.InternalServerError(
-            message=f"litellm.InternalServerError: {custom_llm_provider}Exception - {error_str}",
+            message=f"InternalServerError: {custom_llm_provider}Exception - {error_str}",
             model=model,
             llm_provider=custom_llm_provider,
             litellm_debug_info=extra_information,
@@ -1254,7 +1254,7 @@ def _map_vertex_exception(
 
         if original_exception.status_code == 429:
             raise RateLimitError(
-                message=f"litellm.RateLimitError: {custom_llm_provider.capitalize()}Exception - {error_str}",
+                message=f"RateLimitError: {custom_llm_provider.capitalize()}Exception - {error_str}",
                 model=model,
                 llm_provider=custom_llm_provider,
                 litellm_debug_info=extra_information,
