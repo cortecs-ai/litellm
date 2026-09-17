@@ -2061,6 +2061,9 @@ class Router:
                 return self
 
             async def __anext__(self):
+                replayed_chunk = self._pop_replayed_chunk()
+                if replayed_chunk is not None:
+                    return replayed_chunk
                 return await self._async_generator.__anext__()
 
         async def stream_with_fallbacks():
@@ -2459,6 +2462,9 @@ class Router:
                 return self
 
             async def __anext__(self):
+                replayed_chunk = self._pop_replayed_chunk()
+                if replayed_chunk is not None:
+                    return replayed_chunk
                 try:
                     chunk = await self._async_generator.__anext__()
                 except StopAsyncIteration:

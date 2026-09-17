@@ -5,9 +5,10 @@ import json
 import time
 import traceback
 import uuid
+from collections import deque
 from datetime import datetime
 from functools import lru_cache
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Deque, Dict, List, Literal, Optional
 
 import httpx
 from openai._streaming import SSEDecoder
@@ -119,6 +120,7 @@ class BaseResponsesAPIStreamingIterator:
         self._completed_response_cache_hit: Optional[bool] = None
         self._persist_completed_response_before_logging = True
         self._stream_created_time: float = time.time()
+        self._replay_chunks: Deque[Any] = deque()
 
         # track request context for hooks
         self.litellm_metadata = litellm_metadata
@@ -141,6 +143,19 @@ class BaseResponsesAPIStreamingIterator:
         self._hidden_params["additional_headers"] = process_response_headers(
             self.response.headers or {}
         )  # GUARANTEE OPENAI HEADERS IN RESPONSE
+
+    def prepend_chunk(self, chunk: Any) -> None:
+        replay_chunks = getattr(self, "_replay_chunks", None)
+        if replay_chunks is None:
+            replay_chunks = deque()
+            self._replay_chunks = replay_chunks
+        replay_chunks.appendleft(chunk)
+
+    def _pop_replayed_chunk(self) -> Optional[Any]:
+        replay_chunks = getattr(self, "_replay_chunks", None)
+        if replay_chunks:
+            return replay_chunks.popleft()
+        return None
 
     def _check_max_streaming_duration(self) -> None:
         """Raise litellm.Timeout if the stream has exceeded LITELLM_MAX_STREAMING_DURATION_SECONDS."""
@@ -689,6 +704,9 @@ class ResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     async def __anext__(self) -> Any:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         try:
             self._check_max_streaming_duration()
             while True:
@@ -771,6 +789,9 @@ class SyncResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     def __next__(self):
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         try:
             self._check_max_streaming_duration()
             while True:
@@ -876,6 +897,9 @@ class MockResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     async def __anext__(self) -> Any:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         if self._idx >= len(self._events):
             raise StopAsyncIteration
         evt = self._events[self._idx]
@@ -890,6 +914,9 @@ class MockResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     def __next__(self) -> Any:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         if self._idx >= len(self._events):
             raise StopIteration
         evt = self._events[self._idx]
@@ -943,6 +970,9 @@ class CachedResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     async def __anext__(self) -> Any:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         if self._idx >= len(self._events):
             raise StopAsyncIteration
         evt = self._events[self._idx]
@@ -957,6 +987,9 @@ class CachedResponsesAPIStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     def __next__(self) -> Any:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         if self._idx >= len(self._events):
             raise StopIteration
         evt = self._events[self._idx]

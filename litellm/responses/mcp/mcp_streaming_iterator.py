@@ -405,6 +405,9 @@ class MCPEnhancedStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     async def __anext__(self) -> ResponsesAPIStreamingResponse:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         chunk = await self._anext_impl()
         sequence_number = getattr(chunk, "sequence_number", None)
         if isinstance(sequence_number, int) and sequence_number > self._last_sequence_number:
@@ -817,6 +820,9 @@ class MCPEnhancedStreamingIterator(BaseResponsesAPIStreamingIterator):
         return self
 
     def __next__(self) -> ResponsesAPIStreamingResponse:
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         # First, emit any queued MCP events
         if self.mcp_events:  # type: ignore[attr-defined]
             return self.mcp_events.pop(0)  # type: ignore[attr-defined]

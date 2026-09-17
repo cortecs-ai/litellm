@@ -6,11 +6,13 @@ import logging
 import threading
 import time
 import traceback
+from collections import deque
 from dataclasses import dataclass
 from typing import (
     Any,
     AsyncIterator,
     Callable,
+    Deque,
     Dict,
     Iterator,
     List,
@@ -201,6 +203,7 @@ class CustomStreamWrapper:
         }
 
         self._post_streaming_hooks: Optional[List] = None
+        self._replay_chunks: Deque[ModelResponseStream] = deque()
 
     def _check_max_streaming_duration(self) -> None:
         """Raise litellm.Timeout if the stream has exceeded LITELLM_MAX_STREAMING_DURATION_SECONDS."""
@@ -221,6 +224,14 @@ class CustomStreamWrapper:
 
     def __aiter__(self) -> AsyncIterator["ModelResponseStream"]:
         return self
+
+    def prepend_chunk(self, chunk: "ModelResponseStream") -> None:
+        self._replay_chunks.appendleft(chunk)
+
+    def _pop_replayed_chunk(self) -> Optional["ModelResponseStream"]:
+        if self._replay_chunks:
+            return self._replay_chunks.popleft()
+        return None
 
     async def aclose(self):
         if self.completion_stream is not None:
@@ -1707,6 +1718,9 @@ class CustomStreamWrapper:
             response._hidden_params["additional_headers"]["llm_provider-x-litellm-response-cost"] = float(_usage.cost)
 
     def __next__(self) -> "ModelResponseStream":
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         cache_hit = False
         if self.custom_llm_provider is not None and self.custom_llm_provider == "cached_response":
             cache_hit = True
@@ -1901,6 +1915,9 @@ class CustomStreamWrapper:
         return self.completion_stream
 
     async def __anext__(self) -> "ModelResponseStream":
+        replayed_chunk = self._pop_replayed_chunk()
+        if replayed_chunk is not None:
+            return replayed_chunk
         cache_hit = False
         if self.custom_llm_provider is not None and self.custom_llm_provider == "cached_response":
             cache_hit = True
