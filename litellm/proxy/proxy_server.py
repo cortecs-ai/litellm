@@ -8650,6 +8650,7 @@ async def model_list(
     allowed_providers: Optional[List[str]] = Query(default=None),
     eu_native: Optional[bool] = None,
     allow_quantization: Optional[bool] = None,
+    quantizations: Optional[List[str]] = Query(default=None),
     allow_zero_data_retention: Optional[bool] = None,
     extended: bool = False,
 ):
@@ -8663,6 +8664,7 @@ async def model_list(
       listed providers.
     - eu_native: When true, only return models hosted by EU-native providers.
     - allow_quantization: When false, exclude quantized model variants.
+    - quantizations: Restrict providers to the listed quantization methods.
     - allow_zero_data_retention: When true, only return models from
       zero-data-retention providers.
     - extended: When true, include providers_details.
@@ -8680,6 +8682,8 @@ async def model_list(
         filter_data["eu_native"] = eu_native
     if allow_quantization is not None:
         filter_data["allow_quantization"] = allow_quantization
+    if quantizations is not None:
+        filter_data["quantizations"] = quantizations
     if allow_zero_data_retention is not None:
         filter_data["allow_zero_data_retention"] = allow_zero_data_retention
 
@@ -8700,6 +8704,7 @@ async def model_list(
         allowed_providers=filter_data.get("allowed_providers"),
         eu_native=filter_data.get("eu_native", False),
         allow_quantization=filter_data.get("allow_quantization", True),
+        quantizations=filter_data.get("quantizations"),
         allow_zero_data_retention=filter_data.get("allow_zero_data_retention", False),
         extended=extended,
     )
