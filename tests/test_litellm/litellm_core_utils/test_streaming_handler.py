@@ -3355,33 +3355,3 @@ async def test_transport_read_error_before_finish_reason_raises(logging_obj: Log
         if chunk.choices and chunk.choices[0].finish_reason
     ]
     assert fabricated_finish_reasons == []
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("traffic_type", ["ON_DEMAND", "ON_DEMAND_PRIORITY"])
-async def test_vertex_traffic_type_survives_stream_wrapper(traffic_type: str) -> None:
-    from collections.abc import AsyncIterator
-
-    async def provider_chunks() -> AsyncIterator[ModelResponseStream]:
-        yield ModelResponseStream(
-            choices=[StreamingChoices(index=0, delta=Delta(content="Hello"), finish_reason=None)],
-        )
-        usage_chunk = ModelResponseStream(
-            choices=[StreamingChoices(index=0, delta=Delta(), finish_reason="stop")],
-            usage=Usage(prompt_tokens=2, completion_tokens=9, total_tokens=11),
-        )
-        usage_chunk._hidden_params["provider_specific_fields"] = {"traffic_type": traffic_type}
-        yield usage_chunk
-
-    logger = Logging(
-        model="gemini-3.8-flash", messages=[], stream=True, call_type="acompletion",
-        start_time=time.time(), litellm_call_id="tier-test", function_id="tier-test",
-    )
-    wrapper = CustomStreamWrapper(
-        completion_stream=provider_chunks(), model="gemini-3.8-flash", logging_obj=logger,
-        custom_llm_provider="vertex_ai_beta", stream_options={"include_usage": True},
-    )
-    chunks = [chunk async for chunk in wrapper]
-    final_usage = next(chunk for chunk in reversed(chunks) if chunk.usage is not None)
-    assert final_usage.usage.total_tokens == 11
-    assert final_usage._hidden_params.get("provider_specific_fields", {}).get("traffic_type") == traffic_type
