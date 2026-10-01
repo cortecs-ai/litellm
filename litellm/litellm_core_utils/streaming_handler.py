@@ -1381,6 +1381,10 @@ class CustomStreamWrapper:
         return _ProviderChunkParsed(response_obj)
 
     def chunk_creator(self, chunk: Any):  # type: ignore
+        if self.custom_llm_provider in ("vertex_ai", "vertex_ai_beta") and isinstance(chunk, ModelResponseStream):
+            provider_fields = chunk._hidden_params.get("provider_specific_fields")
+            if isinstance(provider_fields, dict) and isinstance(traffic_type := provider_fields.get("traffic_type"), str):
+                self._base_hidden_params.setdefault("provider_specific_fields", {})["traffic_type"] = traffic_type
         if hasattr(chunk, "id"):
             self.response_id = chunk.id
         model_response = self.model_response_creator()
