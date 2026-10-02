@@ -10520,7 +10520,7 @@ class Router:
                     _azure_fallback_key,
                 )
             else:
-                verbose_router_logger.error(
+                verbose_router_logger.warning(
                     "Could not identify azure model '%s'. Set azure 'base_model' for accurate max tokens, cost tracking, etc.- https://docs.litellm.ai/docs/proxy/cost_tracking#spend-tracking-for-azure-openai-models",
                     _model,
                 )
