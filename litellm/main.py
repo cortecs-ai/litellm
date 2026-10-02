@@ -8506,6 +8506,25 @@ def speech(
             api_key=api_key,
             **kwargs,
         )
+    elif custom_llm_provider == "ovhcloud":
+        from litellm.llms.ovhcloud.text_to_speech.handler import ovhcloud_speech
+
+        riva_fields: Final = ("language_code", "voice_name", "sample_rate_hz", "encoding")
+        riva_optional_params: Final = {
+            **{field: kwargs[field] for field in riva_fields if field in kwargs},
+            **{key: value for key, value in optional_params.items() if key != "extra_body"},
+            **(extra_body if isinstance(extra_body, dict) else {}),
+        }
+        response = ovhcloud_speech(
+            model=model,
+            input=input,
+            voice=voice if isinstance(voice, str) else None,
+            optional_params=riva_optional_params,
+            api_key=api_key or litellm.api_key or get_secret("OVHCLOUD_API_KEY"),
+            api_base=api_base or get_secret("OVHCLOUD_API_BASE"),
+            timeout=timeout,
+            aspeech=aspeech,
+        )
 
     if response is None:
         raise Exception(

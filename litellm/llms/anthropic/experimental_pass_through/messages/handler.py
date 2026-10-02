@@ -7,7 +7,7 @@
 
 import asyncio
 import contextvars
-from collections.abc import AsyncIterator, Coroutine, Iterator
+from collections.abc import AsyncIterator, Coroutine, Iterator, Mapping, Sequence
 from functools import partial
 from typing import Any, Final, cast
 
@@ -70,10 +70,33 @@ def _responses_mode_is_lost_by_prefix_strip(
     )
 
 
+def _messages_have_document_block(messages: Sequence[Mapping[str, object]]) -> bool:
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for raw_block in cast(Sequence[object], content):
+            if not isinstance(raw_block, Mapping):
+                continue
+            block = cast(Mapping[str, object], raw_block)
+            if block.get("type") == "document":
+                return True
+            tool_content = block.get("content")
+            if block.get("type") != "tool_result" or not isinstance(tool_content, list):
+                continue
+            if any(
+                isinstance(part, Mapping) and cast(Mapping[str, object], part).get("type") == "document"
+                for part in cast(Sequence[object], tool_content)
+            ):
+                return True
+    return False
+
+
 def _should_route_to_responses_api(
     custom_llm_provider: str | None,
     requested_model: str | None = None,
     resolved_model: str | None = None,
+    messages: Sequence[Mapping[str, object]] | None = None,
 ) -> bool:
     """Return True when the request should use the Responses API path.
 
@@ -83,6 +106,8 @@ def _should_route_to_responses_api(
     if litellm.use_chat_completions_url_for_anthropic_messages:
         return False
     if custom_llm_provider in _RESPONSES_API_PROVIDERS:
+        return True
+    if custom_llm_provider == "azure" and messages is not None and _messages_have_document_block(messages):
         return True
     if custom_llm_provider is None or requested_model is None or resolved_model is None:
         return False
@@ -580,7 +605,9 @@ def anthropic_messages_handler(
         )
     if anthropic_messages_provider_config is None:
         # Route to Responses API for OpenAI / Azure, chat/completions for everything else.
-        if _should_route_to_responses_api(custom_llm_provider, original_model, model):
+        if _should_route_to_responses_api(
+            custom_llm_provider, original_model, model, cast(Sequence[Mapping[str, object]], messages)
+        ):
             return LiteLLMMessagesToResponsesAPIHandler.anthropic_messages_handler(
                 max_tokens=max_tokens,
                 messages=messages,

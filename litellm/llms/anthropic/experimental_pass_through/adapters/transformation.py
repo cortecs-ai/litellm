@@ -162,6 +162,8 @@ from litellm.types.llms.openai import (
     AllMessageValues,
     ChatCompletionAssistantMessage,
     ChatCompletionAssistantToolCall,
+    ChatCompletionFileObject,
+    ChatCompletionFileObjectFile,
     ChatCompletionImageObject,
     ChatCompletionImageUrlObject,
     ChatCompletionRedactedThinkingBlock,
@@ -463,7 +465,9 @@ class LiteLLMAnthropicMessagesAdapter:
         for m in ordered_messages:
             user_message: ChatCompletionUserMessage | None = None
             tool_message_list: list[ChatCompletionToolMessage] = []
-            new_user_content_list: list[ChatCompletionTextObject | ChatCompletionImageObject] = []
+            new_user_content_list: list[
+                ChatCompletionTextObject | ChatCompletionImageObject | ChatCompletionFileObject
+            ] = []
             if m["role"] == "system":
                 system_message = self._translate_midturn_system_message_to_openai(m, model)
                 if system_message is not None:
@@ -496,13 +500,10 @@ class LiteLLMAnthropicMessagesAdapter:
                                     self._add_prompt_cache_breakpoint_if_present(content, image_obj)
                                 )
                         elif content.get("type") == "document":
-                            # Convert Anthropic document format (PDF, etc.) to OpenAI format
-                            source = content.get("source", {})
-                            openai_image_url = self._translate_anthropic_image_to_openai(cast(dict, source))
-
-                            if openai_image_url:
-                                image_url_obj = ChatCompletionImageUrlObject(url=openai_image_url)
-                                doc_obj = ChatCompletionImageObject(type="image_url", image_url=image_url_obj)
+                            doc_obj = self._translate_anthropic_document_to_openai_file(
+                                cast(Mapping[str, object], content)
+                            )
+                            if doc_obj is not None:
                                 self._add_cache_control_if_applicable(content, doc_obj, model)
                                 new_user_content_list.append(doc_obj)
                         elif content.get("type") == "tool_result":
@@ -1282,6 +1283,35 @@ class LiteLLMAnthropicMessagesAdapter:
         if not isinstance(image_source, dict):
             return None
         return anthropic_image_source_to_openai_url(image_source)
+
+    @staticmethod
+    def _translate_anthropic_document_to_openai_file(
+        block: Mapping[str, object],
+    ) -> ChatCompletionFileObject | None:
+        source: Final = _as_string_mapping(block.get("source"))
+        if source is None:
+            return None
+        if source.get("type") == "base64":
+            data: Final = source.get("data")
+            if not isinstance(data, str) or not data:
+                return None
+            raw_media_type: Final = source.get("media_type")
+            media_type: Final = (
+                raw_media_type if isinstance(raw_media_type, str) and raw_media_type else "application/pdf"
+            )
+            title: Final = block.get("title")
+            return ChatCompletionFileObject(
+                type="file",
+                file=ChatCompletionFileObjectFile(
+                    filename=title if isinstance(title, str) and title else "document.pdf",
+                    file_data=f"data:{media_type};base64,{data}",
+                ),
+            )
+        if source.get("type") == "url":
+            url: Final = source.get("url")
+            if isinstance(url, str) and url:
+                return ChatCompletionFileObject(type="file", file=ChatCompletionFileObjectFile(file_id=url))
+        return None
 
     def _tool_result_content(self, raw_content: object) -> ToolResultContent:
         if isinstance(raw_content, str):
