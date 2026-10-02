@@ -782,4 +782,6 @@ async def _route_request_single_attempt(
         return _cortecs_router_instance.speech_handler.handle_request(data, llm_call)
     if route_type == "aocr":
         return _cortecs_router_instance.ocr_handler.handle_request(data, llm_call)
+    if route_type == "anthropic_messages":
+        return _cortecs_router_instance.anthropic_handler.handle_request(data, llm_call)
     return _cortecs_router_instance.completion_handler.handle_request(data, llm_call)
