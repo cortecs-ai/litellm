@@ -59,8 +59,10 @@ RUN apk add --no-cache \
     python-3.13 \
     python-3.13-dev \
     rust \
-    openssl \
-    openssl-dev \
+    libcrypto3=3.6.5-r1 \
+    libssl3=3.6.5-r1 \
+    openssl=3.6.5-r1 \
+    openssl-dev=3.6.5-r1 \
     nodejs \
     npm \
     libsndfile
@@ -126,7 +128,7 @@ USER root
 RUN echo "https://packages.wolfi.dev/os" >> /etc/apk/repositories
 
 # node (without npm) is required by the prisma CLI at runtime
-RUN apk add --no-cache bash openssl tzdata nodejs python-3.13 libsndfile libevent
+RUN apk add --no-cache bash libcrypto3 libssl3 openssl tzdata nodejs python-3.13 libsndfile libevent
 COPY --from=pgbouncer-builder /usr/local/bin/pgbouncer /usr/local/bin/pgbouncer
 
 WORKDIR /app
