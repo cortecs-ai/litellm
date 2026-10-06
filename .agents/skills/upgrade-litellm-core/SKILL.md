@@ -1,17 +1,29 @@
 ---
 name: upgrade-litellm-core
-description: Periodically upgrade the Cortecs LiteLLM fork to a user-selected BerriAI upstream tag, preserving and auditing fork fixes against evaluator tests and documentation, maintaining the fix catalog, and excluding upstream enterprise code and GitHub Actions. Use for LiteLLM core upgrades or upstream tag merges, not ordinary provider updates or submodule upgrades.
+description: Periodically upgrade the Cortecs LiteLLM fork to a user-selected BerriAI upstream tag, discovering current stable tags when no version is supplied, preserving and auditing fork fixes against evaluator tests and documentation, maintaining the fix catalog, and excluding upstream enterprise code and GitHub Actions. Use for LiteLLM core upgrades or upstream tag merges, not ordinary provider updates or submodule upgrades.
 ---
 
 # Upgrade LiteLLM Core
 
 Upgrade the Cortecs fork from an exact upstream release tag on a new branch named `litellm-upgrade-[version]` and leave the result ready for manual review.
 
-## Get the target first
+## Select the target version
 
-If the user's current request does not already contain an exact target version, ask only: "Which LiteLLM version do you want to upgrade to?"
+If the user's current request already contains an exact target version, do not ask again. Accept a version with or without the leading `v`; resolve it to an exact upstream tag after fetching. If it matches multiple tags or only prereleases, show the matches and ask the user to choose rather than guessing.
 
-Do not inspect remote tags, fetch, merge, or otherwise change the repository before the user answers. Do not ask again when the target is already explicit. Accept a version with or without the leading `v`; resolve it to an exact upstream tag after fetching. If it matches multiple tags or only prereleases, show the matches and ask the user to choose rather than guessing.
+If the user's current request does not contain a target version:
+
+1. Confirm the working directory is the intended LiteLLM fork root and that `upstream` points to `https://github.com/BerriAI/litellm.git` or its SSH equivalent. If `upstream` is missing, add it with that canonical URL. If it points elsewhere, stop and ask before changing it.
+2. Fetch upstream tags into the dedicated namespace used by this skill, without fetching submodules or changing local release tags:
+
+   ```shell
+   git -c submodule.recurse=false fetch --no-recurse-submodules --no-tags --prune upstream +refs/tags/*:refs/upstream-tags/*
+   ```
+
+3. From `refs/upstream-tags/`, select the five newest stable tags by semantic version. Treat only exact `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH` tags as stable; exclude tags with any suffix, including release candidates, development builds, and `-stable` variants. Resolve each candidate with `^{commit}` so broken or non-commit tags are not offered.
+4. Ask: "Which LiteLLM version do you want to upgrade to? Latest stable upstream versions: [newest five tags]." Then wait for the user's choice. Do not create a branch, merge, or otherwise modify the working tree before the user answers.
+
+If fetching fails or no stable tags can be resolved, report the exact problem and ask the user for an exact version instead of presenting a guessed or stale list.
 
 ## Preserve the fork
 
