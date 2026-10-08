@@ -5,7 +5,7 @@ description: Periodically upgrade the Cortecs LiteLLM fork to a user-selected Be
 
 # Upgrade LiteLLM Core
 
-Upgrade the Cortecs fork from an exact upstream release tag on a new branch named `litellm-upgrade-[version]` and leave the result ready for manual review.
+Upgrade the Cortecs fork from an exact upstream release tag on a new branch named `litellm-upgrade-[version]`. After validation, commit the merge and push that branch for manual review.
 
 ## Select the target version
 
@@ -34,10 +34,10 @@ Keep these repository-specific boundaries:
 - Preserve the `litellm/cortecs` gitlink and all existing submodule work. Read its evaluator tests and documentation, run relevant tests, and update the evaluator fix catalog when a verified core fix is missing. These catalog updates are the explicit exception to leaving the submodule unchanged; do not update its checkout, initialize, clean, reset, or change its implementation.
 - Remove the upstream top-level `enterprise/` package after the merge. Do not broadly delete core files or tests merely because their path or content contains the word `enterprise`; this fork currently retains such shared/core code.
 - Restore the complete `.github/` tree from the pre-merge fork baseline. This preserves fork workflows and configuration while excluding upstream GitHub Actions and their support files.
-- After verifying the target tag, create and switch to `litellm-upgrade-[version]` from the recorded pre-upgrade fork HEAD. Use the resolved version without its leading `v`, for example `litellm-upgrade-1.104.0`. Do not commit, push, or create a PR. Use a no-commit merge so the user can review the staged merge result.
+- After verifying the target tag, create and switch to `litellm-upgrade-[version]` from the recorded pre-upgrade fork HEAD. Use the resolved version without its leading `v`, for example `litellm-upgrade-1.104.0`. Use a no-commit merge during resolution and validation, then create a merge commit and push only this new branch. Do not create a PR.
 - Do not stash, reset, clean, or discard pre-existing work. A dirty superproject, excluding submodule dirt, is a blocker that must be reported to the user.
 
-Read and follow the repository's `AGENTS.md` and `CLAUDE.md`. The no-commit/no-push rule above remains mandatory even if a lower-priority repository document says to commit.
+Read and follow the repository's `AGENTS.md` and `CLAUDE.md`. This skill's user-authorized exception permits committing and pushing the completed upgrade on its newly created branch. It does not authorize committing unrelated work, changing the submodule gitlink, or pushing another branch. An explicit no-commit/no-push instruction in the current upgrade request still takes precedence.
 
 ## Evaluator evidence
 
@@ -47,7 +47,7 @@ Some evaluator tests require a running router and real providers; others run in 
 
 ## Repeatable upgrades
 
-Preserve upstream merge ancestry, reuse previous conflict resolutions with review, and keep the remaining core delta small by accepting proven upstream equivalents of fork fixes. Audit fixes on every upgrade and maintain the existing catalog incrementally. Leave a real merge ready for the user to commit manually; explain that squashing or copying upstream files would lose ancestry and make later upgrades harder.
+Preserve upstream merge ancestry, reuse previous conflict resolutions with review, and keep the remaining core delta small by accepting proven upstream equivalents of fork fixes. Audit fixes on every upgrade and maintain the existing catalog incrementally. Commit the real merge with both the fork baseline and upstream target as parents; squashing or copying upstream files would lose ancestry and make later upgrades harder.
 
 ## Perform the upgrade
 
@@ -57,4 +57,4 @@ If a core conflict cannot be resolved with confidence that both the upstream cha
 
 ## Handoff
 
-Report the upgrade branch, resolved tag and commit, the pre-merge baseline, conflicts and semantic resolutions, validation performed, and any failures or uncertainties. State explicitly that nothing was committed or pushed and that the merge remains staged for manual review.
+Report the upgrade branch, resolved tag and target commit, the pre-merge baseline, conflicts and semantic resolutions, validation performed, and any failures or uncertainties. Include the merge commit and push result, or explain why the upgrade remains uncommitted and unpushed. Mention evaluator documentation left for separate submodule review.

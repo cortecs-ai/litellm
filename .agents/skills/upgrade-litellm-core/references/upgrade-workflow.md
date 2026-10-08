@@ -64,7 +64,7 @@ Read applicable instructions within the submodule before editing its evaluator d
 
 For verified fixes missing from the catalog, add entries to the existing documentation in its established format. Include the problem, preserved behavior, affected core paths, code/history references, real regression test references, and live prerequisites. Use the existing date/author fields only when supported by history; explicitly mark unknown details and absent regression coverage. Update an existing entry when it already describes the fix. Do not invent issue IDs, links, tests, or a passing result. Preserve the submodule gitlink and leave documentation edits uncommitted for separate review.
 
-## 4. Merge without committing
+## 4. Merge without committing during resolution
 
 Confirm the current branch is the expected `litellm-upgrade-[version]` branch, then merge `TARGET_COMMIT` into it with `--no-commit --no-ff` and submodule recursion disabled. Enable Git's repository-local recorded conflict resolutions for this invocation, keeping automatic staging disabled:
 
@@ -84,7 +84,7 @@ Resolve conflicts by category:
 
 When upstream independently implements a fork fix, retain the upstream implementation only after verifying semantic equivalence, including edge cases covered by fork tests. Remove truly redundant fork code rather than carrying two implementations, and record that decision in the existing catalog and handoff. Retain regression coverage even when a fork patch is superseded. Keep adaptations focused on affected behavior; broad refactors and whitespace churn would increase future conflicts.
 
-After resolving each core conflict, stage the resolved path. Leave `MERGE_HEAD` present and do not commit.
+After resolving each core conflict, stage the resolved path. Leave `MERGE_HEAD` present until validation is complete so the final commit retains both merge parents.
 
 ## 5. Audit invariants and fork fixes
 
@@ -106,7 +106,7 @@ For every fork-changed path from the `COMMON_BASE..BASE_HEAD` inventory, compare
 
 Pay special attention to modify/delete conflicts, renamed files, tests removed upstream, configuration defaults, authentication, routing, callbacks, database behavior, and public API contracts. Do not silently drop a fix because its old context no longer applies.
 
-## 6. Validate and hand off
+## 6. Validate, commit, and push
 
 Run evaluator regressions relevant to the preserved fixes, focused core tests for conflict-resolved or adapted behavior, and repository-required checks practical for the upgrade. Follow repository bootstrap guidance when dependencies have not been provisioned.
 
@@ -124,6 +124,12 @@ The evaluator currently writes `evaluator/system_test/system_test_report.json`. 
 
 Verify `.github/`, enterprise exclusion, gitlink, and fork behavior invariants again after validation. Update catalog references for adapted or upstream-superseded fixes without adding a duplicate entry on every upgrade.
 
+Before committing, review the complete staged diff and ensure it contains only the intended upgrade result. Run repository-required tests and `make pre-commit` immediately before the commit as directed by `CLAUDE.md`. Stage any intended changes made by the checks, then rerun the affected checks and invariant audit. If a required check fails, a core conflict remains uncertain, or the staged result cannot be verified, leave the merge uncommitted and report the blocker. Missing live-test prerequisites must be reported with their coverage gap; do not claim those tests passed.
+
+When the merge is resolved and the required checks pass, create one conventional merge commit while `MERGE_HEAD` is present. Verify that its first parent is `BASE_HEAD` and its second parent is `TARGET_COMMIT`, and that the branch contains only the intended upgrade. Do not squash or replace the merge with a regular commit. Keep evaluator documentation edits in `litellm/cortecs` uncommitted for separate submodule review; do not stage a changed gitlink or include those edits in the superproject commit.
+
+Before pushing, confirm the current branch is `UPGRADE_BRANCH`, inspect the `origin` URL, and confirm no remote branch with that name exists. Push only the new branch to `origin` with a non-forced explicit refspec such as `git push -u origin HEAD:refs/heads/UPGRADE_BRANCH`. Never push the original branch, tags, or any other ref. If the remote branch already exists, or the push fails, do not force or overwrite it; report the state and ask for direction. Do not create a PR.
+
 Finish with a concise report containing:
 
 - requested and resolved version, tag, and target commit
@@ -133,8 +139,8 @@ Finish with a concise report containing:
 - confirmation of the `.github/`, `enterprise/`, and `litellm/cortecs` invariants
 - tests/checks run and their results
 - unresolved risks or items requiring manual review
-- an explicit statement that no commit or push occurred and the staged merge is ready for user review
+- the merge commit and push result, or the reason the merge remains uncommitted and unpushed
 
-For the next periodic upgrade to benefit from this one, the user's eventual manual commit must preserve this merge's upstream parent. Explain this at handoff; do not create that commit yourself. Evaluator documentation edits are separate uncommitted submodule changes and need separate manual review/commit handling. A completed no-op rerun must not add duplicate catalog rows, repeat a merge, or rewrite unchanged documentation. Existing unresolved validation failures still need to be reported.
+For the next periodic upgrade to benefit from this one, preserve this merge's upstream parent in the commit. Evaluator documentation edits are separate uncommitted submodule changes and need separate manual review/commit handling. A completed no-op rerun must not add duplicate catalog rows, repeat a merge, or rewrite unchanged documentation. Existing unresolved validation failures still need to be reported.
 
 If validation fails, leave the reviewable merge state intact and report the exact failure. Do not abort the merge or discard resolved work unless the user explicitly requests it.
