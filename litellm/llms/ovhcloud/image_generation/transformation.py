@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any
 
 import httpx
 
@@ -17,9 +17,7 @@ from ..utils import OVHCloudException
 
 
 class OVHCloudImageGenerationConfig(BaseImageGenerationConfig):
-    def get_supported_openai_params(
-        self, model: str
-    ) -> List[OpenAIImageGenerationOptionalParams]:
+    def get_supported_openai_params(self, model: str) -> list[OpenAIImageGenerationOptionalParams]:
         return ["n", "response_format", "size"]
 
     def map_openai_params(
@@ -40,29 +38,25 @@ class OVHCloudImageGenerationConfig(BaseImageGenerationConfig):
 
     def get_complete_url(
         self,
-        api_base: Optional[str],
-        api_key: Optional[str],
+        api_base: str | None,
+        api_key: str | None,
         model: str,
         optional_params: dict,
         litellm_params: dict,
-        stream: Optional[bool] = None,
+        stream: bool | None = None,
     ) -> str:
-        base_url = (
-            "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
-            if api_base is None
-            else api_base.rstrip("/")
-        )
+        base_url = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1" if api_base is None else api_base.rstrip("/")
         return f"{base_url}/images/generations"
 
     def validate_environment(
         self,
         headers: dict,
         model: str,
-        messages: List[AllMessageValues],
+        messages: list[AllMessageValues],
         optional_params: dict,
         litellm_params: dict,
-        api_key: Optional[str] = None,
-        api_base: Optional[str] = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
     ) -> dict:
         resolved_api_key = api_key or get_secret_str("OVHCLOUD_API_KEY")
         return {
@@ -92,8 +86,8 @@ class OVHCloudImageGenerationConfig(BaseImageGenerationConfig):
         optional_params: dict,
         litellm_params: dict,
         encoding: Any,
-        api_key: Optional[str] = None,
-        json_mode: Optional[bool] = None,
+        api_key: str | None = None,
+        json_mode: bool | None = None,
     ) -> ImageResponse:
         try:
             response_data = raw_response.json()
@@ -119,8 +113,7 @@ class OVHCloudImageGenerationConfig(BaseImageGenerationConfig):
                 revised_prompt=image.get("revised_prompt"),
             )
             for image in data
-            if isinstance(image, dict)
-            and (image.get("b64_json") is not None or image.get("url") is not None)
+            if isinstance(image, dict) and (image.get("b64_json") is not None or image.get("url") is not None)
         ]
         if not images:
             raise self.get_error_class(
@@ -134,9 +127,7 @@ class OVHCloudImageGenerationConfig(BaseImageGenerationConfig):
         model_response._hidden_params = response_data
         return model_response
 
-    def get_error_class(
-        self, error_message: str, status_code: int, headers: Union[dict, httpx.Headers]
-    ) -> BaseLLMException:
+    def get_error_class(self, error_message: str, status_code: int, headers: dict | httpx.Headers) -> BaseLLMException:
         return OVHCloudException(
             message=error_message,
             status_code=status_code,

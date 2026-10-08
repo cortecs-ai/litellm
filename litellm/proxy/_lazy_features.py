@@ -11,11 +11,12 @@ import importlib
 from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
+from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final
 
 from starlette.routing import BaseRoute, Match
-from starlette.types import Receive, Scope, Send
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from litellm._logging import verbose_proxy_logger
 from litellm.proxy.route_priority import hot_routes_first
@@ -203,6 +204,7 @@ LAZY_FEATURES: Final[tuple[LazyFeature, ...]] = (
             "/cursor/",
             "/deepgram/",
             "/eu.assemblyai/",
+            "/fal_ai/",
             "/gemini/",
             "/gigachat/",
             "/milvus/",
@@ -210,8 +212,10 @@ LAZY_FEATURES: Final[tuple[LazyFeature, ...]] = (
             "/nvidia_nim/",
             "/openai/",
             "/openai_passthrough/",
+            "/tinyfish/",
             "/transcribe",
             "/typesafe/",
+            "/openrouter/",
             "/vertex-ai/",
             "/vertex_ai/",
             "/vllm/",
@@ -247,6 +251,11 @@ LAZY_FEATURES: Final[tuple[LazyFeature, ...]] = (
         name="evals",
         module_path="litellm.proxy.openai_evals_endpoints.endpoints",
         path_prefixes=("/v1/evals", "/evals"),
+    ),
+    LazyFeature(
+        name="decisions",
+        module_path="litellm.proxy.decisions_endpoints.endpoints",
+        path_prefixes=("/v1/decisions", "/decisions", "/v1/systemone", "/systemone"),
     ),
     LazyFeature(
         name="claude_code_marketplace",
@@ -304,7 +313,7 @@ class LazyFeatureMiddleware:
 
     def __init__(
         self,
-        app,
+        app: ASGIApp,
         fastapi_app: "FastAPI",
         features: tuple[LazyFeature, ...] = LAZY_FEATURES,
     ):
@@ -356,6 +365,10 @@ class LazyFeatureMiddleware:
 
 def _lazy_slots(app: "FastAPI") -> Mapping[str, BaseRoute | None]:
     return app.state.lazy_slots if hasattr(app.state, "lazy_slots") else MappingProxyType({})
+
+
+def _lazy_routes(app: "FastAPI") -> Mapping[str, tuple[BaseRoute, ...]]:
+    return app.state.lazy_routes if hasattr(app.state, "lazy_routes") else MappingProxyType({})
 
 
 def reserve_lazy_slot(app: "FastAPI", name: str, features: tuple[LazyFeature, ...] = LAZY_FEATURES) -> None:
@@ -507,6 +520,13 @@ def _make_warmup_router(app: "FastAPI") -> "APIRouter":
         }
 
     return router
+
+
+def lazy_owned_routes(app: "FastAPI") -> frozenset[int]:
+    """ids of the routes lazy features have registered on this app. A route added later at
+    one of their paths (a config pass-through at /v1/decisions) goes ahead of them, the
+    precedence lazy mode gives it when the feature has not loaded by the time the config is read."""
+    return frozenset(id(route) for route in chain.from_iterable(_lazy_routes(app).values()))
 
 
 def loaded_lazy_modules(app: "FastAPI") -> frozenset[str]:
