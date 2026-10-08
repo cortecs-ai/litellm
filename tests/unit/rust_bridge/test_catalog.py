@@ -33,7 +33,9 @@ def isolated_configuration(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
 
 
 @pytest.mark.parametrize("route", tuple(Route))
-@pytest.mark.parametrize("provider", (None, "aws_textract", "bedrock", "mistral", "anthropic", "openai", "azure_ai", "unknown"))
+@pytest.mark.parametrize(
+    "provider", (None, "aws_textract", "bedrock", "mistral", "anthropic", "openai", "azure_ai", "unknown")
+)
 @pytest.mark.parametrize("delivery", tuple(Delivery))
 @pytest.mark.parametrize("process", (None, False, True))
 @pytest.mark.parametrize("environment", (None, "0", "1"))
@@ -50,13 +52,9 @@ def test_shipped_decisions(
         monkeypatch.setenv("LITELLM_RUST", environment)
     context: Final = RouteContext(route, provider=provider, model="test-model", delivery=delivery)
 
-    if (route is Route.OCR and provider == "aws_textract") or (route is Route.TRANSCRIPTION and provider == "bedrock"):
+    if route is Route.OCR or (route is Route.TRANSCRIPTION and provider == "bedrock"):
         assert catalog.rollout(context) is Rollout.RUST_REQUIRED
         assert catalog.decision(context) is Decision.RUST_REQUIRED
-    elif route is Route.OCR:
-        assert catalog.rollout(context) is Rollout.RUST_OPT_OUT
-        enabled: Final = environment == "1" if environment is not None else process is not False
-        assert catalog.decision(context) is (Decision.RUST_WITH_FALLBACK if enabled else Decision.PYTHON)
     else:
         assert catalog.rollout(context) is Rollout.PYTHON_ONLY
         assert catalog.decision(context) is Decision.PYTHON
@@ -138,14 +136,18 @@ def test_first_matching_rule_respects_every_constraint(context: RouteContext, ex
 
 @pytest.mark.parametrize("process", (None, False, True))
 @pytest.mark.parametrize("environment", (None, "0", "1"))
-def test_textract_ocr_has_no_python_path_to_opt_out_to(
-    monkeypatch: pytest.MonkeyPatch, process: bool | None, environment: str | None
+@pytest.mark.parametrize(
+    ("provider", "model"),
+    (("aws_textract", "aws_textract/detect-document-text"), ("azure_ai", "azure_ai/mistral-document-ai-2512")),
+)
+def test_ocr_has_no_python_path_to_opt_out_to(
+    monkeypatch: pytest.MonkeyPatch, process: bool | None, environment: str | None, provider: str, model: str
 ) -> None:
     configuration.rust(process)
     if environment is not None:
         monkeypatch.setenv("LITELLM_RUST", environment)
 
-    assert catalog.decision(RouteContext(Route.OCR, provider="aws_textract", model="m")) is Decision.RUST_REQUIRED
+    assert catalog.decision(RouteContext(Route.OCR, provider=provider, model=model)) is Decision.RUST_REQUIRED
 
 
 @pytest.mark.parametrize(
