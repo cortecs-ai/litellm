@@ -2,6 +2,7 @@ import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -29,6 +30,7 @@ def _make_mock_tts_response():
     inner = MagicMock()
     inner.aiter_bytes = _aiter_bytes
     inner._hidden_params = {}
+    inner.response = httpx.Response(status_code=200, headers={"content-type": "audio/mpeg"})
 
     async def _resolver():
         return inner
@@ -49,16 +51,11 @@ def client_no_auth():
 
 @pytest.mark.asyncio
 @pytest.mark.retry(retries=0)
-async def test_audio_speech_success_does_not_call_post_call_success_hook(
+async def test_audio_speech_success_calls_post_call_success_hook(
     client_no_auth,
 ):
-    """TTS success path must NOT call post_call_success_hook.
-
-    TTS returns a streaming binary response (HttpxBinaryResponseContent) which
-    is not in LLMResponseTypes. Prometheus metrics for successful requests are
-    tracked at the litellm level via async_log_success_event, not here.
-    """
-    mock_success_hook = AsyncMock()
+    """TTS success runs the post-call hook used for speech accounting."""
+    mock_success_hook = AsyncMock(side_effect=lambda *, response, **_: response)
     mock_failure_hook = AsyncMock()
     mock_pre_call = AsyncMock(side_effect=lambda *, data, **kw: data)
     mock_update_status = AsyncMock()
@@ -93,7 +90,7 @@ async def test_audio_speech_success_does_not_call_post_call_success_hook(
         app.dependency_overrides = original_overrides
 
     assert response.status_code == 200
-    mock_success_hook.assert_not_called()
+    mock_success_hook.assert_awaited_once()
     mock_failure_hook.assert_not_called()
 
 
