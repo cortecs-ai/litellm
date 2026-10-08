@@ -112,7 +112,13 @@ Run evaluator regressions relevant to the preserved fixes, focused core tests fo
 
 Use the catalog's `Live: No/Yes/Mixed` labels as a starting point and inspect fixtures and parametrization: even collecting a test can require external services. In-process tests should import this upgraded checkout. Live tests require a router serving this upgraded checkout, configured providers, and valid credentials. The current harness uses `LLM_ROUTER_URL`, `LLM_ROUTER_API_KEY`, and MongoDB configuration (`DOCDB_USER`, `DOCDB_PW`, `DOCDB_URL`, `SERVERLESS_DATABASE`, `SERVERLESS_COLLECTION`). Read current setup instructions rather than assuming these names or commands remain stable.
 
-Reuse a suitable instance or launch the documented local development service when configuration is available. Verify which checkout/version it serves; tests against an older deployment do not validate the upgrade. Do not change a deployed service to make a test pass. When prerequisites are unavailable, complete independent tests and report the exact missing prerequisite and relevant untested regressions; skipped or uncollected live tests are not passes.
+For live integration tests, start a local proxy from the upgraded checkout. From the fork root, use the bootstrapped project environment and load `litellm/cortecs/.env` with `python-dotenv`:
+
+```shell
+dotenv -f litellm/cortecs/.env run -- python litellm/proxy/proxy_cli.py --config litellm/cortecs/proxy_config_dev.yaml --debug
+```
+
+Keep the proxy running while executing the selected evaluator tests, with the same `.env` loaded into the test process. Verify that the local instance serves this checkout and that its URL, API key, providers, and database settings satisfy the test fixtures. Do not print or commit values from `.env`. When prerequisites are unavailable, complete independent tests and report the exact missing prerequisite and relevant untested regressions; skipped or uncollected live tests are not passes.
 
 The evaluator currently writes `evaluator/system_test/system_test_report.json`. Record existing contents/status before running tests, identify generated changes separately from catalog edits, and preserve pre-existing reports. If a validation command rewrites other generated files, inspect those changes and retain only expected upgrade output.
 

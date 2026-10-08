@@ -43,7 +43,7 @@ Read and follow the repository's `AGENTS.md` and `CLAUDE.md`. The no-commit/no-p
 
 `litellm/cortecs/evaluator/` contains tests and documentation of core fixes. Start with the core-change catalog in `evaluator/system_test/README.md` and tests in `evaluator/system_test/patches/`, but independently inspect the fork delta: the catalog may be incomplete. Add verified missing fixes to the existing documentation using its format and evidence from code/history, without duplicating existing entries or inventing references or test coverage.
 
-Some evaluator tests require a running router and real providers; others run in process. Read the catalog's `Live` labels, fixtures, and test setup before selecting tests. A live test only verifies the upgrade when the running instance serves this upgraded checkout. Report unavailable prerequisites and untested behaviors accurately.
+Some evaluator tests require a running router and real providers; others run in process. Read the catalog's `Live` labels, fixtures, and test setup before selecting tests. For live integration tests, start a local proxy from this upgraded checkout with `litellm/cortecs/proxy_config_dev.yaml` and load `litellm/cortecs/.env` as described in the validation workflow. A live test only verifies the upgrade when the running instance serves this upgraded checkout. Report unavailable prerequisites and untested behaviors accurately.
 
 ## Repeatable upgrades
 
