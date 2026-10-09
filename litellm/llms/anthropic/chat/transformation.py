@@ -423,6 +423,8 @@ class AnthropicConfig(AnthropicModelInfo, BaseConfig):
         signals: e.g. Claude Opus 4.5 supports ``output_config`` without
         advertising a non-default (max/xhigh) effort level.
         """
+        if AnthropicConfig._supports_model_capability(model, "supports_adaptive_thinking", custom_llm_provider):
+            return True
         if AnthropicConfig._supports_model_capability(model, "supports_output_config", custom_llm_provider):
             return True
         return any(
