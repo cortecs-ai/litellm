@@ -527,7 +527,7 @@ class AmazonConverseConfig(BaseConfig):
         - Anthropic models: mapped to ``thinking`` (and ``output_config.effort`` on
           adaptive Claude 4.6 / 4.7).
         """
-        if "gpt-oss" in model or "deepseek" in model:
+        if "gpt-oss" in model or "deepseek" in model or "nvidia.nemotron-nano-3-30b" in model:
             optional_params["reasoning_effort"] = reasoning_effort
         elif self._is_openai_gpt_reasoning_model(model):
             reasoning: Final[BedrockConverseGptReasoningEffortBlock] = {"effort": reasoning_effort}
@@ -722,6 +722,8 @@ class AmazonConverseConfig(BaseConfig):
         elif self._is_nova_2_model(model):
             # Nova 2 models support reasoning_effort (transformed to reasoningConfig)
             # These models use a different reasoning structure than Anthropic's thinking parameter
+            supported_params.append("reasoning_effort")
+        elif "nvidia.nemotron-nano-3-30b" in model:
             supported_params.append("reasoning_effort")
         elif self._model_accepts_anthropic_thinking_param(model=model, base_model=base_model):
             supported_params.append("thinking")
