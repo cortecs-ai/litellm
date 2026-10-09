@@ -1338,7 +1338,7 @@ class CustomStreamWrapper:
                 "is_finished": chunk_finish_reason is not None,
                 "finish_reason": chunk_finish_reason,
                 "original_chunk": cached_chunk,
-                "tool_calls": (getattr(cached_choice.delta, "tool_calls", None) if cached_choice is not None else None),
+                "tool_calls": cached_choice.delta.tool_calls if cached_choice is not None else None,
             }
 
             completion_obj["content"] = response_obj["text"]
@@ -1404,7 +1404,9 @@ class CustomStreamWrapper:
     def chunk_creator(self, chunk: Any):
         if self.custom_llm_provider in ("vertex_ai", "vertex_ai_beta") and isinstance(chunk, ModelResponseStream):
             provider_fields = chunk._hidden_params.get("provider_specific_fields")
-            if isinstance(provider_fields, dict) and isinstance(traffic_type := provider_fields.get("traffic_type"), str):
+            if isinstance(provider_fields, dict) and isinstance(
+                traffic_type := provider_fields.get("traffic_type"), str
+            ):
                 self._base_hidden_params.setdefault("provider_specific_fields", {})["traffic_type"] = traffic_type
         if hasattr(chunk, "id"):
             self.response_id = chunk.id

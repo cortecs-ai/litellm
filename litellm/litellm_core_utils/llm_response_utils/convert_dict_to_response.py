@@ -373,9 +373,7 @@ from collections import defaultdict
 
 
 def _handle_invalid_parallel_tool_calls(
-    tool_calls: list[
-        ChatCompletionMessageToolCall | ChatCompletionMessageCustomToolCall
-    ],  # mutable-ok: patched in place via slice assignment
+    tool_calls: list[ChatCompletionMessageToolCall | ChatCompletionMessageCustomToolCall],
 ):
     """
     Handle hallucinated parallel tool call from openai - https://community.openai.com/t/model-tries-to-call-unknown-function-multi-tool-use-parallel/490653
@@ -827,12 +825,8 @@ def convert_to_model_response_object(
                 elif transcription_usage.get("type", None) == "tokens":
                     tr_usage_object = TranscriptionUsageTokensObject(**transcription_usage)
                 elif (
-                    isinstance(
-                        transcription_usage.get("prompt_audio_seconds"), (int, float)
-                    )
-                    and not isinstance(
-                        transcription_usage.get("prompt_audio_seconds"), bool
-                    )
+                    isinstance(transcription_usage.get("prompt_audio_seconds"), (int, float))
+                    and not isinstance(transcription_usage.get("prompt_audio_seconds"), bool)
                     and math.isfinite(transcription_usage["prompt_audio_seconds"])
                     and transcription_usage["prompt_audio_seconds"] >= 0
                 ):

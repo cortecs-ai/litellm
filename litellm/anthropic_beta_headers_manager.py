@@ -149,9 +149,7 @@ def get_beta_headers_config(url: str) -> dict:
         return GetAnthropicBetaHeadersConfig.load_local_beta_headers_config()
 
     # Validate the fetched config
-    if not GetAnthropicBetaHeadersConfig.validate_beta_headers_config(
-        fetched_config=content
-    ):
+    if not GetAnthropicBetaHeadersConfig.validate_beta_headers_config(fetched_config=content):
         verbose_logger.warning(
             "LiteLLM: Fetched beta headers config failed integrity check. Using local backup instead. url=%s",
             url,
@@ -336,7 +334,7 @@ def update_headers_with_filtered_beta(
         Updated headers dict
     """
     existing_beta: Final = headers.get("anthropic-beta")
-    if not existing_beta:
+    if existing_beta is None:
         return headers
 
     # Parse existing beta headers
